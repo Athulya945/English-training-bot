@@ -1,12 +1,14 @@
 "use client"
 
 import { useChat } from "@ai-sdk/react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Plus, Send, Search, Settings, User, Menu, X, Store, TrendingUp, Users } from "lucide-react"
+import { Plus, Send, Search, Settings, User, Menu, X, Store, TrendingUp, Users, Bot, Mic, MicOff} from "lucide-react"
+import ReactMarkdown from "react-markdown"
+import clsx from "clsx"
 
 export default function ChatInterface() {
   const { messages, input, handleInputChange, handleSubmit, isLoading } = useChat()
@@ -17,6 +19,31 @@ export default function ChatInterface() {
     { id: 3, title: "Pricing Strategy", active: false },
     { id: 4, title: "Store Visit Planning", active: false },
   ])
+  const SpeechRecognition = typeof window !== "undefined" 
+  ? (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition 
+  : null;
+
+  const [listening, setListening] = useState(false);
+  const [recognition, setRecognition] = useState<any>(null);
+  const [placeholder, setPlaceholder] = useState("Ask about outlet strategy or pitch...");
+
+  useEffect(() => {
+  if (SpeechRecognition) {
+    const recog = new SpeechRecognition();
+    recog.continuous = false;
+    recog.interimResults = false;
+    recog.lang = "en-US";
+    recog.onresult = (event: any) => {
+      const transcript = event.results[0][0].transcript;
+      handleInputChange({ target: { value: transcript } } as any);
+    };
+    recog.onend = () => {
+    setListening(false);
+    setPlaceholder("Ask about outlet strategy or pitch...");
+  };
+    setRecognition(recog);
+  }
+}, []);
 
   const suggestionCards = [
     {
@@ -58,7 +85,7 @@ export default function ChatInterface() {
       <div
         className={`
         fixed lg:relative lg:translate-x-0 transition-transform duration-300 ease-in-out z-50
-        w-80 bg-gray-800 border-r border-gray-700 flex flex-col h-full
+        w-80 bg-gray-800 border-r border-gray-700 flex flex-col h-full 
         ${isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"}
         lg:w-80 md:w-72 sm:w-64
       `}
@@ -153,7 +180,7 @@ export default function ChatInterface() {
           {messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full max-w-4xl mx-auto px-4">
               <div className="w-12 h-12 sm:w-16 sm:h-16 bg-purple-600 rounded-full flex items-center justify-center mb-4 sm:mb-6">
-                <Store className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
+                <Bot className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
               </div>
 
               <h1 className="text-xl sm:text-2xl lg:text-3xl font-semibold mb-2 text-center">
@@ -219,7 +246,9 @@ export default function ChatInterface() {
                       message.role === "user" ? "bg-purple-600 text-white ml-8 sm:ml-12" : "bg-gray-800 text-white"
                     }`}
                   >
-                    <div className="whitespace-pre-wrap text-sm sm:text-base leading-relaxed">{message.content}</div>
+                    <div className="prose prose-invert text-sm sm:text-base leading-relaxed max-w-none">
+                      <ReactMarkdown>{message.content}</ReactMarkdown>
+                    </div>
                   </div>
                   {message.role === "user" && (
                     <div className="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0">
@@ -250,14 +279,45 @@ export default function ChatInterface() {
         <div className="p-3 sm:p-6 border-t border-gray-700">
           <div className="max-w-4xl mx-auto">
             <form onSubmit={handleSubmit} className="relative">
-              <div className="flex items-center gap-2 bg-gray-800 rounded-lg border border-gray-700 p-2">
-                <Input
+              <div className="flex items-end gap-2 bg-gray-800 rounded-lg border border-gray-700 p-2 max-h-[300px] overflow-y-auto">
+                <textarea
                   value={input}
                   onChange={handleInputChange}
-                  placeholder="Ask about outlet strategies, competitor analysis, or pitch preparation..."
-                  className="flex-1 bg-transparent border-none text-white placeholder-gray-400 focus:ring-0 text-sm sm:text-base"
+                  placeholder={placeholder}
+                  className="w-full bg-transparent border-none outline-none focus:outline-none text-white placeholder-gray-400 focus:ring-0 text-sm sm:text-base p-2 resize-none min-h-[40px] max-h-[160px] leading-tight overflow-y-auto"
+                  rows={1}
                   disabled={isLoading}
+                  onInput={(e) => {
+                    // Auto-grow height
+                    const target = e.target as HTMLTextAreaElement;
+                    target.style.height = "auto";
+                    target.style.height = `${Math.min(target.scrollHeight, 160)}px`;
+                  }}
                 />
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => {
+                    if (!recognition) return;
+                    if (listening) {
+                      recognition.stop();
+                      setListening(false);
+                      setPlaceholder("Ask about outlet strategy or pitch...");
+                    } else {
+                      recognition.start();
+                      setListening(true);
+                      setPlaceholder("Listening...");
+                    }
+                  }}
+                  className={clsx(
+                    "text-white px-3 py-2 relative overflow-hidden",
+                    listening
+                      ? "bg-red-600 hover:bg-red-700 animate-pulse-ring"
+                      : "bg-purple-600 hover:bg-purple-700"
+                  )}
+                >
+                  {listening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                </Button>
                 <Button
                   type="submit"
                   size="sm"

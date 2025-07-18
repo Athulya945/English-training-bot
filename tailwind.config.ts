@@ -69,7 +69,22 @@ const config: Config = {
   			md: 'calc(var(--radius) - 2px)',
   			sm: 'calc(var(--radius) - 4px)'
   		},
+		
   		keyframes: {
+			 soundWaves: {
+				'0%': {
+					transform: 'scale(1)',
+					boxShadow: '0 0 0 0 rgba(255, 160, 122, 0.4)',
+				},
+				'50%': {
+					transform: 'scale(1.05)',
+					boxShadow: '0 0 0 20px rgba(255, 160, 122, 0)',
+				},
+				'100%': {
+					transform: 'scale(1)',
+					boxShadow: '0 0 0 0 rgba(255, 160, 122, 0)',
+				},
+				},
   			'accordion-down': {
   				from: {
   					height: '0'
@@ -89,10 +104,13 @@ const config: Config = {
   		},
   		animation: {
   			'accordion-down': 'accordion-down 0.2s ease-out',
-  			'accordion-up': 'accordion-up 0.2s ease-out'
+  			'accordion-up': 'accordion-up 0.2s ease-out',
+			'pulse-ring': 'soundWaves 2s infinite',
   		}
   	}
   },
-  plugins: [require("tailwindcss-animate")],
+  plugins: [require("tailwindcss-animate"),
+			require('@tailwindcss/typography'),
+  ],
 };
 export default config;
