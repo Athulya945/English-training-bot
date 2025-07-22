@@ -8,6 +8,9 @@ const inter = Inter({ subsets: ['latin'] })
 export const metadata: Metadata = {
   title: 'Outlet Assistant - Ideal Ice Creams',
   description: 'AI-powered outlet approach assistant for ice cream business',
+  icons: {
+    icon: '/bot.ico', 
+  },
 }
 
 export default function RootLayout({

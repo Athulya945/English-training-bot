@@ -31,7 +31,7 @@ import { AuthModal } from "@/components/AuthModal";
 import { useModel } from "@/contexts/ModelContext";
 import  ModelSelector  from "@/components/ModelSelector"
 
-export default function ChatInterface() {
+export default function TrainingChat() {
   const { user, signOut } = useAuth();
   const {
     conversations,
@@ -425,7 +425,7 @@ export default function ChatInterface() {
             <div className="flex items-center gap-2">
               <Store className="w-4 h-4 lg:w-5 lg:h-5 text-purple-700" />
               <span className="font-semibold text-sm lg:text-base text-gray-800">
-                Outlet Assistant
+                Training Assistant
               </span>
             </div>
             <Button
@@ -572,123 +572,7 @@ export default function ChatInterface() {
 
         {/* Chat Messages - FIXED: Proper flex and overflow handling for mobile */}
         <div className="flex-1 min-h-0">
-          <ScrollArea className="h-full flex flex-col p-2 lg:p-4">
-            {messages.length === 0 && !isLoadingConversation ? (
-              <div className="flex flex-col items-center justify-center min-h-full max-w-4xl mx-auto px-2 lg:px-4 py-4">
-                <div className="w-10 h-10 lg:w-16 lg:h-16 bg-purple-700 rounded-full flex items-center justify-center mb-3 lg:mb-6 shadow-md">
-                  <Bot className="w-5 h-5 lg:w-8 lg:h-8 text-white" />
-                </div>
-
-                <h1 className="text-lg lg:text-3xl font-semibold mb-2 text-center leading-tight text-gray-800">
-                  How can I help with your outlet approach today?
-                </h1>
-                <p className="text-gray-600 text-center mb-4 lg:mb-8 max-w-2xl text-sm lg:text-base leading-relaxed">
-                  I'm here to assist you with any queries related to approaching
-                  outlets, understanding competitive advantages, and
-                  strategizing your pitch.
-                </p>
-
-                {/* Suggestion Cards - More compact on mobile */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-2 lg:gap-4 mb-4 lg:mb-8 w-full max-w-4xl">
-                  {suggestionCards.map((card, index) => {
-                    const IconComponent = card.icon;
-                    return (
-                      <Card
-                        key={index}
-                        className="p-3 lg:p-5 bg-white border-gray-200 hover:bg-gray-50 cursor-pointer transition-all duration-300 group shadow-sm hover:shadow-[0_0_6px_2px_rgba(106,27,154,0.25)]  hover:scale-105"
-                        onClick={() =>
-                          handleSuggestionClick(
-                            `Help me with ${card.title.toLowerCase()} ${card.subtitle.toLowerCase()}`
-                          )
-                        }
-                      >
-                        <div className="flex items-center gap-2 lg:gap-3 mb-2 lg:mb-3">
-                          <div className="w-6 h-6 lg:w-8 lg:h-8 bg-purple-700 rounded-lg flex items-center justify-center group-hover:bg-purple-800 transition-colors flex-shrink-0 shadow-sm">
-                            <IconComponent className="w-3 h-3 lg:w-4 lg:h-4 text-white" />
-                          </div>
-                          <div className="min-w-0">
-                            <h3 className="font-medium text-gray-800 text-sm lg:text-base">
-                              {card.title}
-                            </h3>
-                            <p className="text-xs lg:text-sm text-purple-700">
-                              {card.subtitle}
-                            </p>
-                          </div>
-                        </div>
-                        <p className="text-xs lg:text-sm text-gray-600 leading-relaxed">
-                          {card.description}
-                        </p>
-                      </Card>
-                    );
-                  })}
-                </div>
-
-                {/* Call to Action - Hidden on mobile to save space */}
-                <div className="text-center max-w-2xl hidden lg:block">
-                  <p className="text-sm lg:text-base text-gray-700 mb-2 font-medium">
-                    Ready to expand your ice cream distribution?
-                  </p>
-                  <p className="text-xs lg:text-sm text-gray-600">
-                    Ask anything about outlet approach, compare with competitor
-                    offerings, or get guidance on your store visits.
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <div className="max-w-4xl mx-auto space-y-3 lg:space-y-6 pb-4">
-                {messages.map((message,index) => (
-                  <div
-                    key={message.id}
-                    className={`flex gap-2 lg:gap-4 fade-in-up ${
-                        message.role === "user" ? "justify-end" : "justify-start"
-                      }`}
-                  >
-                    {message.role === "assistant" && (
-                      <div className="w-6 h-6 lg:w-8 lg:h-8 bg-purple-700 rounded-full flex items-center justify-center flex-shrink-0 shadow-sm">
-                        <Bot className="w-3 h-3 lg:w-4 lg:h-4 text-white" />
-                      </div>
-                    )}
-                    <div
-                      className={`max-w-[70%] lg:max-w-2xl p-2 lg:p-4 rounded-lg shadow-sm ${
-                        message.role === "user"
-                          ? "bg-purple-700 text-white ml-6 lg:ml-12"
-                          : "bg-white text-gray-800 border border-gray-200"
-                      }`}
-                    >
-                      <div
-                        className={`prose text-sm lg:text-base leading-relaxed max-w-none prose-p:my-1 lg:prose-p:my-2 prose-headings:my-1 lg:prose-headings:my-2 ${
-                          message.role === "user" ? "text-gray-50" : "prose-gray"
-                        }`}
-                      >
-                        <ReactMarkdown>{message.content}</ReactMarkdown>
-                      </div>
-                    </div>
-                    {message.role === "user" && (
-                      <div className="w-6 h-6 lg:w-8 lg:h-8 bg-gray-400 rounded-full flex items-center justify-center flex-shrink-0 shadow-sm">
-                        <User className="w-3 h-3 lg:w-4 lg:h-4 text-white" />
-                      </div>
-                    )}
-                  </div>
-                ))}
-                {isLoading && (
-                  <div className="flex gap-2 lg:gap-4 justify-start">
-                    <div className="w-6 h-6 lg:w-8 lg:h-8 bg-purple-700 rounded-full flex items-center justify-center flex-shrink-0 shadow-sm">
-                      <Bot className="w-3 h-3 lg:w-4 lg:h-4 text-white" />
-                    </div>
-                    <div className="max-w-2xl p-2 lg:p-4 rounded-lg bg-white text-gray-800 border border-gray-200 shadow-sm">
-                      <div className="flex items-center gap-1 lg:gap-2">
-                        <div className="w-1.5 h-1.5 lg:w-2 lg:h-2 bg-purple-700 rounded-full animate-bounce-dot"></div>
-                        <div className="w-1.5 h-1.5 lg:w-2 lg:h-2 bg-purple-700 rounded-full animate-bounce-dot ml-1"></div>
-                        <div className="w-1.5 h-1.5 lg:w-2 lg:h-2 bg-purple-700 rounded-full animate-bounce-dot ml-1"></div>
-                        <span className="text-xs lg:text-sm text-gray-600 ml-2">Thinking...</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-                <div ref={bottomRef} />
-              </div>
-            )}
-          </ScrollArea>
+          
         </div>
 
         {/* Input Area - FIXED: Better mobile spacing and positioning */}
@@ -696,43 +580,7 @@ export default function ChatInterface() {
           <div className="max-w-4xl mx-auto">
             <form onSubmit={onSubmit} className="relative">
               <div className="flex items-center gap-1 lg:gap-2 bg-white rounded-full border border-gray-300 p-2 min-h-[44px] lg:min-h-[52px] shadow-[0_0_6px_2px_rgba(106,27,154,0.25)]">
-                <textarea
-                    value={input}
-                    onChange={handleInputChange}
-                    placeholder={placeholder}
-                    className="w-full bg-transparent border-none outline-none focus:outline-none text-gray-800 placeholder-gray-500 focus:ring-0 text-sm lg:text-base p-1 lg:p-2 resize-none min-h-[28px] lg:min-h-[36px] max-h-[80px] lg:max-h-[160px] leading-[28px] lg:leading-[36px] overflow-y-auto"
-                    rows={1}
-                    disabled={isLoading}
-                    onInput={handleTextareaResize}
-                    onKeyDown={handleKeyDown}
-                  />
-                {recognition && (
-                  <Button
-                    type="button"
-                    size="sm"
-                    onClick={toggleSpeechRecognition}
-                    className={clsx(
-                      "text-white px-2 py-1 lg:px-3 lg:py-2 relative overflow-hidden h-8 w-8 lg:h-10 lg:w-10 flex-shrink-0 shadow-sm rounded-full",
-                      listening
-                        ? "bg-red-600 hover:bg-red-700 animate-pulse-ring"
-                        : "bg-purple-700 hover:bg-purple-800"
-                    )}
-                  >
-                    {listening ? (
-                      <MicOff className="w-3 h-3 lg:w-3 lg:h-3" />
-                    ) : (
-                      <Mic className="w-3 h-3 lg:w-3 lg:h-3" />
-                    )}
-                  </Button>
-                )}
-                <Button
-                  type="submit"
-                  size="sm"
-                  className="bg-purple-700 hover:bg-purple-800 text-white px-2 py-1 lg:px-3 lg:py-2 h-8 w-8 lg:h-10 lg:w-10 flex-shrink-0 shadow-sm rounded-full"
-                  disabled={isLoading || !input.trim()}
-                >
-                  <Send className="w-3 h-3 lg:w-4 lg:h-4" />
-                </Button>
+                
               </div>
             </form>
           </div>
