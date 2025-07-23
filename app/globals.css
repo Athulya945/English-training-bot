@@ -129,6 +129,14 @@ body {
   animation: fadeInUp 0.3s ease-out both;
 }
 
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* IE & Edge */
+  scrollbar-width: none;     /* Firefox */
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;             /* Chrome, Safari, Opera */
+}
+
 @layer base {
   * {
     @apply border-border;
