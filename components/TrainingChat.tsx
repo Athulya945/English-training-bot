@@ -36,12 +36,12 @@ import ModelSelector from "@/components/ModelSelector";
 import { MessageBubble } from "./MessageBubble";
 import { GradientOrb } from "./Gradientorb";
 import { PushToTalkBar } from "@/components/PushToTalkBar";
-import Scenarios  from "@/utils/Scenarios.json";
+import Scenarios from "@/utils/Scenarios.json";
 
 // Define message type for better type safety
 interface ChatMessage {
   id: string;
-  role: 'user' | 'assistant';
+  role: "user" | "assistant";
   content: string;
 }
 
@@ -58,7 +58,8 @@ export default function TrainingChat() {
   } = useConversations();
 
   // Speech Recognition setup
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const SpeechRecognition =
+    window.SpeechRecognition || window.webkitSpeechRecognition;
   const recognitionRef = useRef<SpeechRecognition | null>(null);
 
   // Initialize speech recognition
@@ -76,9 +77,9 @@ export default function TrainingChat() {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isLoadingConversation, setIsLoadingConversation] = useState(false);
-  const [activeTab, setActiveTab] = useState('scenarios');
+  const [activeTab, setActiveTab] = useState("scenarios");
   const [isRecording, setIsRecording] = useState(false);
-  const [currentMode, setCurrentMode] = useState('sales');
+  const [currentMode, setCurrentMode] = useState("sales");
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -95,7 +96,7 @@ export default function TrainingChat() {
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     if (bottomRef.current) {
-      bottomRef.current.scrollIntoView({ behavior: 'smooth' });
+      bottomRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [chatMessages]);
 
@@ -111,7 +112,7 @@ export default function TrainingChat() {
 
     setAppHeight();
     window.addEventListener("resize", setAppHeight);
-    handleScenarioClick("retail-pitch")
+    handleScenarioClick("retail-pitch");
     return () => window.removeEventListener("resize", setAppHeight);
   }, []);
 
@@ -127,7 +128,7 @@ export default function TrainingChat() {
   }, [signOut]);
 
   const [activeScenarioId, setActiveScenarioId] = useState<string | null>(null);
-  let scenarioDetails=null;
+  let scenarioDetails = null;
 
   const handleScenarioClick = (scenarioId: string) => {
     setActiveScenarioId(scenarioId);
@@ -139,103 +140,122 @@ export default function TrainingChat() {
   };
 
   // Add message to chat
-  const addMessage = useCallback((role: 'user' | 'assistant', content: string) => {
-    const newMessage: ChatMessage = {
-      id: Date.now().toString(),
-      role,
-      content
-    };
-    setChatMessages(prev => [...prev, newMessage]);
-  }, []);
+  const addMessage = useCallback(
+    (role: "user" | "assistant", content: string) => {
+      const newMessage: ChatMessage = {
+        id: Date.now().toString(),
+        role,
+        content,
+      };
+      setChatMessages((prev) => [...prev, newMessage]);
+    },
+    []
+  );
 
   // Send text to API and handle audio response
-  const sendMessageToAPI = useCallback(async (text: string) => {
-  try {
-    // Add user message to chat
-    addMessage('user', text);
-
-    setIsLoading(true);
-
-    // Prepare messages for API (include conversation history)
-    const messages = [
-      ...chatMessages.map(msg => ({
-        role: msg.role,
-        content: msg.content
-      })),
-      { role: 'user', content: text }
-    ];
-
-    // Send to API
-    const response = await fetch('/api/voicechat', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        messages,
-        scenario: scenarioDetails // Include current mode
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error(`API Error: ${response.status} ${response.statusText}`);
-    }
-
-    // Parse JSON { text, audio }
-    const data = await response.json();
-
-    if (!data.text || !data.audio) {
-      throw new Error('Incomplete response from server');
-    }
-
-    // Add assistant text to chat
-    setIsLoading(false);
-
-    addMessage('assistant', data.text);
-
-    // Decode base64 audio
-    const base64 = data.audio.split(',')[1] || data.audio; // Remove "data:audio/mp3;base64," if present
-    const audioBlob = new Blob([Uint8Array.from(atob(base64), c => c.charCodeAt(0))], {
-      type: 'audio/mpeg',
-    });
-    const audioUrl = URL.createObjectURL(audioBlob);
-
-    // Play audio
-    if (audioRef.current) {
-      audioRef.current.src = audioUrl;
-      setIsPlayingAudio(true);
-
-      audioRef.current.onended = () => {
-        setIsPlayingAudio(false);
-        URL.revokeObjectURL(audioUrl);
-      };
-
-      audioRef.current.onerror = () => {
-        setIsPlayingAudio(false);
-        URL.revokeObjectURL(audioUrl);
-        console.error('Audio playback failed');
-      };
-
-      await audioRef.current.play();
-    }
-
-    // Save to conversation if needed
-    if (currentConversationId) {
+  const sendMessageToAPI = useCallback(
+    async (text: string) => {
       try {
-        await saveMessage(currentConversationId, "user", text);
-        await saveMessage(currentConversationId, "assistant", data.text);
-        refetchConversations();
+        // Add user message to chat
+        addMessage("user", text);
+
+        setIsLoading(true);
+
+        // Prepare messages for API (include conversation history)
+        const messages = [
+          ...chatMessages.map((msg) => ({
+            role: msg.role,
+            content: msg.content,
+          })),
+          { role: "user", content: text },
+        ];
+
+        // Send to API
+        const response = await fetch("/api/voicechat", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            messages,
+            scenario: scenarioDetails, // Include current mode
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error(
+            `API Error: ${response.status} ${response.statusText}`
+          );
+        }
+
+        // Parse JSON { text, audio }
+        const data = await response.json();
+
+        if (!data.text || !data.audio) {
+          throw new Error("Incomplete response from server");
+        }
+
+        // Add assistant text to chat
+        setIsLoading(false);
+
+        addMessage("assistant", data.text);
+
+        // Decode base64 audio
+        const base64 = data.audio.split(",")[1] || data.audio; // Remove "data:audio/mp3;base64," if present
+        const audioBlob = new Blob(
+          [Uint8Array.from(atob(base64), (c) => c.charCodeAt(0))],
+          {
+            type: "audio/mpeg",
+          }
+        );
+        const audioUrl = URL.createObjectURL(audioBlob);
+
+        // Play audio
+        if (audioRef.current) {
+          audioRef.current.src = audioUrl;
+          setIsPlayingAudio(true);
+
+          audioRef.current.onended = () => {
+            setIsPlayingAudio(false);
+            URL.revokeObjectURL(audioUrl);
+          };
+
+          audioRef.current.onerror = () => {
+            setIsPlayingAudio(false);
+            URL.revokeObjectURL(audioUrl);
+            console.error("Audio playback failed");
+          };
+
+          await audioRef.current.play();
+        }
+
+        // Save to conversation if needed
+        if (currentConversationId) {
+          try {
+            await saveMessage(currentConversationId, "user", text);
+            await saveMessage(currentConversationId, "assistant", data.text);
+            refetchConversations();
+          } catch (error) {
+            console.error("Failed to save messages:", error);
+          }
+        }
       } catch (error) {
-        console.error("Failed to save messages:", error);
+        console.error("Error sending message:", error);
+        addMessage(
+          "assistant",
+          "Sorry, I encountered an error. Please try again."
+        );
       }
-    }
-
-  } catch (error) {
-    console.error('Error sending message:', error);
-    addMessage('assistant', 'Sorry, I encountered an error. Please try again.');
-  }
-  }, [chatMessages, currentMode, currentConversationId, addMessage, saveMessage, refetchConversations]);
-
+    },
+    [
+      chatMessages,
+      currentMode,
+      currentConversationId,
+      addMessage,
+      saveMessage,
+      refetchConversations,
+    ]
+  );
 
   const handleStartRecording = useCallback(() => {
     const recognition = recognitionRef.current;
@@ -247,13 +267,13 @@ export default function TrainingChat() {
     setIsRecording(true);
 
     recognition.onstart = () => {
-      console.log('Speech recognition started');
+      console.log("Speech recognition started");
     };
 
     recognition.onresult = (event) => {
       const transcript = event.results[0][0].transcript;
       console.log("Transcribed:", transcript);
-      
+
       // Send the transcribed text to API
       sendMessageToAPI(transcript);
     };
@@ -261,12 +281,14 @@ export default function TrainingChat() {
     recognition.onerror = (event) => {
       console.error("Speech recognition error:", event.error);
       setIsRecording(false);
-      
+
       // Handle specific errors
-      if (event.error === 'not-allowed') {
-        alert('Microphone access denied. Please allow microphone access and try again.');
-      } else if (event.error === 'no-speech') {
-        console.log('No speech detected, stopping recording');
+      if (event.error === "not-allowed") {
+        alert(
+          "Microphone access denied. Please allow microphone access and try again."
+        );
+      } else if (event.error === "no-speech") {
+        console.log("No speech detected, stopping recording");
       }
     };
 
@@ -277,7 +299,7 @@ export default function TrainingChat() {
     try {
       recognition.start();
     } catch (error) {
-      console.error('Failed to start recognition:', error);
+      console.error("Failed to start recognition:", error);
       setIsRecording(false);
     }
   }, [sendMessageToAPI]);
@@ -291,11 +313,11 @@ export default function TrainingChat() {
   }, []);
 
   const handleBackToScenarios = useCallback(() => {
-    setActiveTab('scenarios');
+    setActiveTab("scenarios");
   }, []);
 
   const handleToggleMode = useCallback(() => {
-    setCurrentMode(prev => prev === 'sales' ? 'game' : 'sales');
+    setCurrentMode((prev) => (prev === "sales" ? "game" : "sales"));
   }, []);
 
   // Clear chat messages when mode changes
@@ -304,9 +326,9 @@ export default function TrainingChat() {
   }, [currentMode]);
 
   const sidebarTabs = [
-    { id: 'scenarios', label: 'Scenarios', icon: FileText },
-    { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
-    { id: 'chat-history', label: 'Chat History', icon: MessageSquare },
+    { id: "scenarios", label: "Scenarios", icon: FileText },
+    { id: "dashboard", label: "Dashboard", icon: BarChart3 },
+    { id: "chat-history", label: "Chat History", icon: MessageSquare },
   ];
 
   const messageEndRef = useRef<HTMLDivElement | null>(null);
@@ -318,7 +340,7 @@ export default function TrainingChat() {
   return (
     <div className="flex bg-stone-50 text-gray-800 h-screen overflow-hidden">
       {/* Hidden audio element for playback */}
-      <audio ref={audioRef} style={{ display: 'none' }} />
+      <audio ref={audioRef} style={{ display: "none" }} />
 
       {/* Mobile Menu Overlay */}
       {isMobileMenuOpen && (
@@ -401,157 +423,240 @@ export default function TrainingChat() {
 
         {/* Tab Content */}
         <ScrollArea className="flex-1 p-4 lg:p-5">
-          {activeTab === 'scenarios' && currentMode === 'sales' && (
-              <div className="space-y-4">
-                <h3 className="font-semibold text-gray-800 mb-4 text-lg">Sales Training Scenarios</h3>
-                <div className="space-y-3">
-                  <Card
-                    onClick={() => handleScenarioClick("retail-pitch")}
-                    className={`p-4 cursor-pointer transition-all duration-200 border 
-                      ${activeScenarioId === "retail-pitch" 
-                        ? "bg-gradient-to-r from-gray-100 to-purple-100 border-purple-300 shadow-md" 
-                        : "border-gray-200 hover:bg-gradient-to-r hover:from-gray-50 hover:to-purple-50 hover:border-purple-200 hover:shadow-md"}
-                    `}
-                  >
-                    <h4 className="text-sm font-semibold text-gray-800 mb-1">Retail Outlet Pitch</h4>
-                    <p className="text-xs text-gray-600">Learn how to introduce Ideal Ice Creams to new outlets.</p>
-                  </Card>
-
-                  <Card
-                    onClick={() => handleScenarioClick("upsell-pushcart")}
-                    className={`p-4 cursor-pointer transition-all duration-200 border 
-                      ${activeScenarioId === "upsell-pushcart" 
-                        ? "bg-gradient-to-r from-gray-100 to-orange-100 border-orange-300 shadow-md" 
-                        : "border-gray-200 hover:bg-gradient-to-r hover:from-gray-50 hover:to-orange-50 hover:border-orange-200 hover:shadow-md"}
-                    `}
-                  >
-                    <h4 className="text-sm font-semibold text-gray-800 mb-1">Upselling at Pushcart</h4>
-                    <p className="text-xs text-gray-600">Practice turning basic orders into high-value sales.</p>
-                  </Card>
-
-                  <Card
-                    onClick={() => handleScenarioClick("price-objection")}
-                    className={`p-4 cursor-pointer transition-all duration-200 border 
-                      ${activeScenarioId === "price-objection" 
-                        ? "bg-gradient-to-r from-gray-100 to-green-100 border-green-300 shadow-md" 
-                        : "border-gray-200 hover:bg-gradient-to-r hover:from-gray-50 hover:to-green-50 hover:border-green-200 hover:shadow-md"}
-                    `}
-                  >
-                    <h4 className="text-sm font-semibold text-gray-800 mb-1">Price Objection Handling</h4>
-                    <p className="text-xs text-gray-600">Learn to confidently handle concerns about pricing.</p>
-                  </Card>
-
-                  <Card
-                    onClick={() => handleScenarioClick("restaurant-pitch")}
-                    className={`p-4 cursor-pointer transition-all duration-200 border 
-                      ${activeScenarioId === "restaurant-pitch" 
-                        ? "bg-gradient-to-r from-gray-100 to-blue-100 border-blue-300 shadow-md" 
-                        : "border-gray-200 hover:bg-gradient-to-r hover:from-gray-50 hover:to-blue-50 hover:border-blue-200 hover:shadow-md"}
-                    `}
-                  >
-                    <h4 className="text-sm font-semibold text-gray-800 mb-1">Restaurant Dessert Pitch</h4>
-                    <p className="text-xs text-gray-600">Pitch dessert solutions to restaurants that don't yet serve ice cream.</p>
-                  </Card>
-                </div>
-              </div>
-            )}
-
-            {activeTab === 'scenarios' && currentMode === 'game' && (
-              <div className="space-y-4">
-                <h3 className="font-semibold text-gray-800 mb-4 text-lg">Interactive Game Scenarios</h3>
-                <div className="space-y-3">
-                  <Card
-                    onClick={() => handleScenarioClick("rush-hour")}
-                    className={`p-4 cursor-pointer transition-all duration-200 border 
-                      ${activeScenarioId === "rush-hour" 
-                        ? "bg-gradient-to-r from-gray-100 to-yellow-100 border-yellow-300 shadow-md" 
-                        : "border-gray-200 hover:bg-gradient-to-r hover:from-gray-50 hover:to-yellow-50 hover:border-yellow-200 hover:shadow-md"}
-                    `}
-                  >
-                    <h4 className="text-sm font-semibold text-gray-800 mb-1">Rush Hour at the Kiosk</h4>
-                    <p className="text-xs text-gray-600">Handle fast-paced orders and upsell under pressure for bonus points.</p>
-                  </Card>
-
-                  <Card
-                    onClick={() => handleScenarioClick("melting-stock")}
-                    className={`p-4 cursor-pointer transition-all duration-200 border 
-                      ${activeScenarioId === "melting-stock" 
-                        ? "bg-gradient-to-r from-gray-100 to-red-100 border-red-300 shadow-md" 
-                        : "border-gray-200 hover:bg-gradient-to-r hover:from-gray-50 hover:to-red-50 hover:border-red-200 hover:shadow-md"}
-                    `}
-                  >
-                    <h4 className="text-sm font-semibold text-gray-800 mb-1">Melting Stock Challenge</h4>
-                    <p className="text-xs text-gray-600">Respond to an unhappy customer with empathy and quick action.</p>
-                  </Card>
-
-                  <Card
-                    onClick={() => handleScenarioClick("curious-kid")}
-                    className={`p-4 cursor-pointer transition-all duration-200 border 
-                      ${activeScenarioId === "curious-kid" 
-                        ? "bg-gradient-to-r from-gray-100 to-pink-100 border-pink-300 shadow-md" 
-                        : "border-gray-200 hover:bg-gradient-to-r hover:from-gray-50 hover:to-pink-50 hover:border-pink-200 hover:shadow-md"}
-                    `}
-                  >
-                    <h4 className="text-sm font-semibold text-gray-800 mb-1">The Curious Kid</h4>
-                    <p className="text-xs text-gray-600">Help an indecisive customer and earn rewards for creative suggestions.</p>
-                  </Card>
-
-                  <Card
-                    onClick={() => handleScenarioClick("bulk-order")}
-                    className={`p-4 cursor-pointer transition-all duration-200 border 
-                      ${activeScenarioId === "bulk-order" 
-                        ? "bg-gradient-to-r from-gray-100 to-indigo-100 border-indigo-300 shadow-md" 
-                        : "border-gray-200 hover:bg-gradient-to-r hover:from-gray-50 hover:to-indigo-50 hover:border-indigo-200 hover:shadow-md"}
-                    `}
-                  >
-                    <h4 className="text-sm font-semibold text-gray-800 mb-1">Bulk Party Order</h4>
-                    <p className="text-xs text-gray-600">Negotiate a deal for a large order and unlock bonus sales points.</p>
-                  </Card>
-                </div>
-              </div>
-            )}
-
-          {activeTab === 'dashboard' && (
+          {activeTab === "scenarios" && currentMode === "sales" && (
             <div className="space-y-4">
-              <h3 className="font-semibold text-gray-800 mb-4 text-lg">Performance Dashboard</h3>
+              <h3 className="font-semibold text-gray-800 mb-4 text-lg">
+                Sales Training Scenarios
+              </h3>
+              <div className="space-y-3">
+                <Card
+                  onClick={() => handleScenarioClick("retail-pitch")}
+                  className={`p-4 cursor-pointer transition-all duration-200 border 
+                      ${
+                        activeScenarioId === "retail-pitch"
+                          ? "bg-gradient-to-r from-gray-100 to-purple-100 border-purple-300 shadow-md"
+                          : "border-gray-200 hover:bg-gradient-to-r hover:from-gray-50 hover:to-purple-50 hover:border-purple-200 hover:shadow-md"
+                      }
+                    `}
+                >
+                  <h4 className="text-sm font-semibold text-gray-800 mb-1">
+                    Retail Outlet Pitch
+                  </h4>
+                  <p className="text-xs text-gray-600">
+                    Learn how to introduce Ideal Ice Creams to new outlets.
+                  </p>
+                </Card>
+
+                <Card
+                  onClick={() => handleScenarioClick("upsell-pushcart")}
+                  className={`p-4 cursor-pointer transition-all duration-200 border 
+                      ${
+                        activeScenarioId === "upsell-pushcart"
+                          ? "bg-gradient-to-r from-gray-100 to-orange-100 border-orange-300 shadow-md"
+                          : "border-gray-200 hover:bg-gradient-to-r hover:from-gray-50 hover:to-orange-50 hover:border-orange-200 hover:shadow-md"
+                      }
+                    `}
+                >
+                  <h4 className="text-sm font-semibold text-gray-800 mb-1">
+                    Upselling at Pushcart
+                  </h4>
+                  <p className="text-xs text-gray-600">
+                    Practice turning basic orders into high-value sales.
+                  </p>
+                </Card>
+
+                <Card
+                  onClick={() => handleScenarioClick("price-objection")}
+                  className={`p-4 cursor-pointer transition-all duration-200 border 
+                      ${
+                        activeScenarioId === "price-objection"
+                          ? "bg-gradient-to-r from-gray-100 to-green-100 border-green-300 shadow-md"
+                          : "border-gray-200 hover:bg-gradient-to-r hover:from-gray-50 hover:to-green-50 hover:border-green-200 hover:shadow-md"
+                      }
+                    `}
+                >
+                  <h4 className="text-sm font-semibold text-gray-800 mb-1">
+                    Price Objection Handling
+                  </h4>
+                  <p className="text-xs text-gray-600">
+                    Learn to confidently handle concerns about pricing.
+                  </p>
+                </Card>
+
+                <Card
+                  onClick={() => handleScenarioClick("restaurant-pitch")}
+                  className={`p-4 cursor-pointer transition-all duration-200 border 
+                      ${
+                        activeScenarioId === "restaurant-pitch"
+                          ? "bg-gradient-to-r from-gray-100 to-blue-100 border-blue-300 shadow-md"
+                          : "border-gray-200 hover:bg-gradient-to-r hover:from-gray-50 hover:to-blue-50 hover:border-blue-200 hover:shadow-md"
+                      }
+                    `}
+                >
+                  <h4 className="text-sm font-semibold text-gray-800 mb-1">
+                    Restaurant Dessert Pitch
+                  </h4>
+                  <p className="text-xs text-gray-600">
+                    Pitch dessert solutions to restaurants that don't yet serve
+                    ice cream.
+                  </p>
+                </Card>
+              </div>
+            </div>
+          )}
+
+          {activeTab === "scenarios" && currentMode === "game" && (
+            <div className="space-y-4">
+              <h3 className="font-semibold text-gray-800 mb-4 text-lg">
+                Interactive Game Scenarios
+              </h3>
+              <div className="space-y-3">
+                <Card
+                  onClick={() => handleScenarioClick("rush-hour")}
+                  className={`p-4 cursor-pointer transition-all duration-200 border 
+                      ${
+                        activeScenarioId === "rush-hour"
+                          ? "bg-gradient-to-r from-gray-100 to-yellow-100 border-yellow-300 shadow-md"
+                          : "border-gray-200 hover:bg-gradient-to-r hover:from-gray-50 hover:to-yellow-50 hover:border-yellow-200 hover:shadow-md"
+                      }
+                    `}
+                >
+                  <h4 className="text-sm font-semibold text-gray-800 mb-1">
+                    Rush Hour at the Kiosk
+                  </h4>
+                  <p className="text-xs text-gray-600">
+                    Handle fast-paced orders and upsell under pressure for bonus
+                    points.
+                  </p>
+                </Card>
+
+                <Card
+                  onClick={() => handleScenarioClick("melting-stock")}
+                  className={`p-4 cursor-pointer transition-all duration-200 border 
+                      ${
+                        activeScenarioId === "melting-stock"
+                          ? "bg-gradient-to-r from-gray-100 to-red-100 border-red-300 shadow-md"
+                          : "border-gray-200 hover:bg-gradient-to-r hover:from-gray-50 hover:to-red-50 hover:border-red-200 hover:shadow-md"
+                      }
+                    `}
+                >
+                  <h4 className="text-sm font-semibold text-gray-800 mb-1">
+                    Melting Stock Challenge
+                  </h4>
+                  <p className="text-xs text-gray-600">
+                    Respond to an unhappy customer with empathy and quick
+                    action.
+                  </p>
+                </Card>
+
+                <Card
+                  onClick={() => handleScenarioClick("curious-kid")}
+                  className={`p-4 cursor-pointer transition-all duration-200 border 
+                      ${
+                        activeScenarioId === "curious-kid"
+                          ? "bg-gradient-to-r from-gray-100 to-pink-100 border-pink-300 shadow-md"
+                          : "border-gray-200 hover:bg-gradient-to-r hover:from-gray-50 hover:to-pink-50 hover:border-pink-200 hover:shadow-md"
+                      }
+                    `}
+                >
+                  <h4 className="text-sm font-semibold text-gray-800 mb-1">
+                    The Curious Kid
+                  </h4>
+                  <p className="text-xs text-gray-600">
+                    Help an indecisive customer and earn rewards for creative
+                    suggestions.
+                  </p>
+                </Card>
+
+                <Card
+                  onClick={() => handleScenarioClick("bulk-order")}
+                  className={`p-4 cursor-pointer transition-all duration-200 border 
+                      ${
+                        activeScenarioId === "bulk-order"
+                          ? "bg-gradient-to-r from-gray-100 to-indigo-100 border-indigo-300 shadow-md"
+                          : "border-gray-200 hover:bg-gradient-to-r hover:from-gray-50 hover:to-indigo-50 hover:border-indigo-200 hover:shadow-md"
+                      }
+                    `}
+                >
+                  <h4 className="text-sm font-semibold text-gray-800 mb-1">
+                    Bulk Party Order
+                  </h4>
+                  <p className="text-xs text-gray-600">
+                    Negotiate a deal for a large order and unlock bonus sales
+                    points.
+                  </p>
+                </Card>
+              </div>
+            </div>
+          )}
+
+          {activeTab === "dashboard" && (
+            <div className="space-y-4">
+              <h3 className="font-semibold text-gray-800 mb-4 text-lg">
+                Performance Dashboard
+              </h3>
               <div className="space-y-4">
                 <Card className="p-4 bg-gradient-to-r from-blue-50 to-blue-100 border-blue-200">
                   <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium text-gray-700">Sessions Completed</span>
+                    <span className="text-sm font-medium text-gray-700">
+                      Sessions Completed
+                    </span>
                     <span className="font-bold text-xl text-blue-600">12</span>
                   </div>
                 </Card>
                 <Card className="p-4 bg-gradient-to-r from-green-50 to-green-100 border-green-200">
                   <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium text-gray-700">Average Score</span>
-                    <span className="font-bold text-xl text-green-600">8.5/10</span>
+                    <span className="text-sm font-medium text-gray-700">
+                      Average Score
+                    </span>
+                    <span className="font-bold text-xl text-green-600">
+                      8.5/10
+                    </span>
                   </div>
                 </Card>
                 <Card className="p-4 bg-gradient-to-r from-purple-50 to-purple-100 border-purple-200">
                   <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium text-gray-700">Time Practiced</span>
-                    <span className="font-bold text-xl text-purple-600">4.2h</span>
+                    <span className="text-sm font-medium text-gray-700">
+                      Time Practiced
+                    </span>
+                    <span className="font-bold text-xl text-purple-600">
+                      4.2h
+                    </span>
                   </div>
                 </Card>
               </div>
             </div>
           )}
 
-          {activeTab === 'chat-history' && (
+          {activeTab === "chat-history" && (
             <div className="space-y-4">
-              <h3 className="font-semibold text-gray-800 mb-4 text-lg">Recent Conversations</h3>
+              <h3 className="font-semibold text-gray-800 mb-4 text-lg">
+                Recent Conversations
+              </h3>
               <div className="space-y-3">
                 <Card className="p-4 hover:bg-gray-50 cursor-pointer transition-all duration-200 border border-gray-200 hover:shadow-md">
-                  <h4 className="text-sm font-semibold text-gray-800 mb-1">Sales Call Practice</h4>
-                  <p className="text-xs text-gray-500">2 hours ago • 15 messages</p>
+                  <h4 className="text-sm font-semibold text-gray-800 mb-1">
+                    Sales Call Practice
+                  </h4>
+                  <p className="text-xs text-gray-500">
+                    2 hours ago • 15 messages
+                  </p>
                 </Card>
                 <Card className="p-4 hover:bg-gray-50 cursor-pointer transition-all duration-200 border border-gray-200 hover:shadow-md">
-                  <h4 className="text-sm font-semibold text-gray-800 mb-1">Product Demo Training</h4>
-                  <p className="text-xs text-gray-500">Yesterday • 23 messages</p>
+                  <h4 className="text-sm font-semibold text-gray-800 mb-1">
+                    Product Demo Training
+                  </h4>
+                  <p className="text-xs text-gray-500">
+                    Yesterday • 23 messages
+                  </p>
                 </Card>
                 <Card className="p-4 hover:bg-gray-50 cursor-pointer transition-all duration-200 border border-gray-200 hover:shadow-md">
-                  <h4 className="text-sm font-semibold text-gray-800 mb-1">Negotiation Practice</h4>
-                  <p className="text-xs text-gray-500">3 days ago • 18 messages</p>
+                  <h4 className="text-sm font-semibold text-gray-800 mb-1">
+                    Negotiation Practice
+                  </h4>
+                  <p className="text-xs text-gray-500">
+                    3 days ago • 18 messages
+                  </p>
                 </Card>
               </div>
             </div>
@@ -572,7 +677,10 @@ export default function TrainingChat() {
             >
               <Menu className="w-5 h-5" />
             </Button>
-            <ModelSelector selectedModel={selectedModel} setSelectedModel={setSelectedModel} />
+            <ModelSelector
+              selectedModel={selectedModel}
+              setSelectedModel={setSelectedModel}
+            />
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
             <Button
@@ -607,23 +715,28 @@ export default function TrainingChat() {
 
           {/* Chat Messages */}
           <ScrollArea className="flex-1 px-4 lg:px-6">
-            <div  className="max-w-4xl max-h-[300px] overflow-y-auto mx-auto scrollbar-hide">
+            <div className="max-w-4xl max-h-[180px] overflow-y-auto mx-auto scrollbar-hide">
               {chatMessages.length === 0 ? (
                 <div className="text-center text-gray-500 py-8">
                   <h2 className="text-xl font-semibold mb-3 text-gray-700">
-                    Ready for your {currentMode === 'sales' ? 'sales training' : 'practice game'}?
+                    Ready for your{" "}
+                    {currentMode === "sales"
+                      ? "sales training"
+                      : "practice game"}
+                    ?
                   </h2>
-                  <p className="text-sm text-gray-600 max-w-md mx-auto">
-                    Press and hold the microphone button below to start speaking with your AI training assistant.
+                  <p className="text-sm  text-gray-600 max-w-md mx-auto">
+                    Press and hold the microphone button below to start speaking
+                    with your AI training assistant.
                   </p>
                 </div>
               ) : (
                 <div className="space-y-4 pb-4">
                   {chatMessages.map((message, index) => (
                     <MessageBubble
-                      key={message.id || index} 
+                      key={message.id || index}
                       message={message}
-                      isUser={message.role === 'user'}
+                      isUser={message.role === "user"}
                     />
                   ))}
                   {isLoading && (
@@ -632,10 +745,18 @@ export default function TrainingChat() {
                         <div className="flex items-center space-x-2">
                           <div className="flex space-x-1">
                             <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce"></div>
-                            <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                            <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                            <div
+                              className="w-2 h-2 bg-purple-400 rounded-full animate-bounce"
+                              style={{ animationDelay: "0.1s" }}
+                            ></div>
+                            <div
+                              className="w-2 h-2 bg-purple-400 rounded-full animate-bounce"
+                              style={{ animationDelay: "0.2s" }}
+                            ></div>
                           </div>
-                          <span className="text-xs text-gray-500">Thinking...</span>
+                          <span className="text-xs text-gray-500">
+                            Thinking...
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -649,7 +770,7 @@ export default function TrainingChat() {
 
         {/* Push-to-Talk Control Bar */}
         <div>
-          <div className="fixed inset-x-0 bottom-[80px] flex justify-center lg:justify-start lg:pl-[52%]">
+          <div className="fixed inset-x-0 bottom-[30px] flex justify-center lg:justify-start lg:pl-[52%]">
             <PushToTalkBar
               isRecording={isRecording}
               onStartRecording={handleStartRecording}

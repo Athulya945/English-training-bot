@@ -1,21 +1,17 @@
 import { Button } from "@/components/ui/button";
-import {
-  Mic,
-  ArrowLeft,
-  RotateCcw,
-} from "lucide-react";
+import { Mic, ArrowLeft, RotateCcw } from "lucide-react";
 import clsx from "clsx";
 
-export const PushToTalkBar = ({ 
-  isRecording, 
-  onStartRecording, 
-  onStopRecording, 
-  onBack, 
-  currentMode, 
-  onToggleMode 
+export const PushToTalkBar = ({
+  isRecording,
+  onStartRecording,
+  onStopRecording,
+  onBack,
+  currentMode,
+  onToggleMode,
 }) => {
   return (
-    <div className="flex flex-col items-center bottom-8 z-30">
+    <div className="flex flex-col items-center bottom-2 z-30">
       <div className="flex items-center gap-4 bg-white/95 backdrop-blur-md rounded-full px-6 py-4 shadow-xl border border-gray-200/50">
         {/* Back Button */}
         <Button
@@ -29,14 +25,11 @@ export const PushToTalkBar = ({
 
         {/* Push-to-Talk Mic Button */}
         <Button
-          onMouseDown={onStartRecording}
-          onMouseUp={onStopRecording}
-          onTouchStart={onStartRecording}
-          onTouchEnd={onStopRecording}
+          onClick={isRecording ? onStopRecording : onStartRecording}
           className={clsx(
             "w-16 h-16 rounded-full transition-all duration-200 flex items-center justify-center shadow-lg",
             isRecording
-              ? "bg-gradient-to-br from-red-500 to-red-600 shadow-red-200/50 scale-110 animate-pulse"
+              ? "bg-gradient-to-br from-red-500 to-red-600 shadow-red-200/50 scale-110 mic-listening"
               : "bg-gradient-to-br from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 shadow-purple-200/50 hover:scale-105"
           )}
         >
@@ -53,11 +46,11 @@ export const PushToTalkBar = ({
           <RotateCcw className="w-4 h-4" />
         </Button>
       </div>
-      
+
       {/* Mode Indicator */}
       <div className="mt-3 text-center">
         <span className="text-xs text-gray-500 bg-white/90 backdrop-blur-sm rounded-full px-3 py-1 shadow-sm">
-          {currentMode === 'sales' ? 'Sales Training Mode' : 'Game Mode'}
+          {currentMode === "sales" ? "Sales Training Mode" : "Game Mode"}
         </span>
       </div>
     </div>
