@@ -3,6 +3,7 @@
 import { AuthGuard } from "@/components/AuthGuard";
 import QueryChat from "@/components/ChatInterface";
 import TrainingChat from "@/components/TrainingChat";
+import OnboardingChat from "@/components/OnboardingChat";
 import { ModelProvider, useModel } from "@/contexts/ModelContext";
 
 function ChatSwitcher() {
@@ -11,8 +12,15 @@ function ChatSwitcher() {
   return (
     <div className="flex flex-col gap-4">
 
-      {selectedModel === "training" ? <TrainingChat /> : <QueryChat />}
+      {selectedModel === "training" ? (
+        <TrainingChat />
+      ) : selectedModel === "query" ? (
+        <QueryChat />
+      ) : (
+        <OnboardingChat />
+      )}
     </div>
+    
   );
 }
 

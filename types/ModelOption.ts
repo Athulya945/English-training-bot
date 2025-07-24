@@ -1,1 +1,1 @@
-export type ModelOption = "query" | "training";
+export type ModelOption = "query" | "training" | "onboarding";

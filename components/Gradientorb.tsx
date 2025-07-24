@@ -169,7 +169,7 @@ export const GradientOrb = ({ isSpeaking = false, isLoading = false }) => {
         }
 
         .animate-speaking {
-          animation: speaking 0.6s ease-in-out infinite;
+          animation: speaking 0.9s ease-in-out infinite;
         }
 
         .animate-inner-glow {

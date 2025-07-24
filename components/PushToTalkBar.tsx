@@ -9,6 +9,7 @@ export const PushToTalkBar = ({
   onBack,
   currentMode,
   onToggleMode,
+  showModeIndicator = true,
 }) => {
   return (
     <div className="flex flex-col items-center bottom-2 z-30">
@@ -48,11 +49,13 @@ export const PushToTalkBar = ({
       </div>
 
       {/* Mode Indicator */}
-      <div className="mt-3 text-center">
-        <span className="text-xs text-gray-500 bg-white/90 backdrop-blur-sm rounded-full px-3 py-1 shadow-sm">
-          {currentMode === "sales" ? "Sales Training Mode" : "Game Mode"}
-        </span>
-      </div>
+      {showModeIndicator && (
+        <div className="mt-3 text-center">
+          <span className="text-xs text-gray-500 bg-white/90 backdrop-blur-sm rounded-full px-3 py-1 shadow-sm">
+            {currentMode === "sales" ? "Sales Training Mode" : "Game Mode"}
+          </span>
+        </div>
+      )}
     </div>
   );
 };

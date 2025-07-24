@@ -4,9 +4,10 @@ import { ChevronDownIcon } from "@heroicons/react/20/solid";
 const modelOptions = [
   { value: "query", label: "Query AI" },
   { value: "training", label: "Training AI" },
+  { value: "onboarding", label:"Onboarding AI"}
 ];
 
-type ModelOption = "query" | "training";
+type ModelOption = "query" | "training" | "onboarding";
 
 interface ModelSelectorProps {
   selectedModel: ModelOption;
