@@ -22,6 +22,9 @@ import {
   MicOff,
   LogOut,
   Trash2,
+  GraduationCap,
+  BookOpen,
+  HelpCircle,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import clsx from "clsx";
@@ -29,7 +32,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useConversations, type Conversation } from "@/hooks/useConversations";
 import { AuthModal } from "@/components/AuthModal";
 import { useModel } from "@/contexts/ModelContext";
-import  ModelSelector  from "@/components/ModelSelector"
+//import  ModelSelector  from "@/components/ModelSelector"
 
 export default function ChatInterface() {
   const { user, signOut } = useAuth();
@@ -106,7 +109,7 @@ export default function ChatInterface() {
   const [listening, setListening] = useState(false);
   const [recognition, setRecognition] = useState<any>(null);
   const [placeholder, setPlaceholder] = useState(
-    "Ask about outlet strategy or pitch..."
+    "Ask about English..."
   );
   const { selectedModel, setSelectedModel } = useModel();
 
@@ -213,25 +216,25 @@ export default function ChatInterface() {
 
   const suggestionCards = [
     {
-      title: "Outlet Approach",
-      subtitle: "Strategy",
+      title: "Interview Preparation",
+      subtitle: "Training",
       description:
-        "Get guidance on approaching new retail outlets and building partnerships",
-      icon: Store,
+        "Get guidance on interview preparation and building partnerships", 
+      icon: GraduationCap,
     },
     {
-      title: "Competitive",
-      subtitle: "Analysis",
+      title: "English Training",
+      subtitle: "Training",
       description:
-        "Compare your offerings with competitors and identify advantages",
-      icon: TrendingUp,
+        "Get guidance on English training and build confidence in your speaking skills", 
+      icon: BookOpen,
     },
     {
-      title: "Pitch",
-      subtitle: "Preparation",
+      title: "Quiz",
+      subtitle: "Training",
       description:
-        "Prepare compelling presentations for store managers and buyers",
-      icon: Users,
+        "Let's get know how much you know about English", 
+      icon: HelpCircle,
     },
   ];
 
@@ -425,7 +428,7 @@ export default function ChatInterface() {
             <div className="flex items-center gap-2">
               <Store className="w-4 h-4 lg:w-5 lg:h-5 text-purple-700" />
               <span className="font-semibold text-sm lg:text-base text-gray-800">
-                Outlet Assistant
+                English Training Bot
               </span>
             </div>
             <Button
@@ -534,7 +537,8 @@ export default function ChatInterface() {
             >
               <Menu className="w-4 h-4" />
             </Button>
-            <ModelSelector selectedModel={selectedModel} setSelectedModel={setSelectedModel} />
+            {/* TODO: Fix - ModelSelector is not defined or imported */}
+            {/* <ModelSelector selectedModel={selectedModel} setSelectedModel={setSelectedModel} /> */}
           </div>
           <div className="flex items-center gap-1 flex-shrink-0">
             <Button
@@ -580,12 +584,10 @@ export default function ChatInterface() {
                 </div>
 
                 <h1 className="text-lg lg:text-3xl font-semibold mb-2 text-center leading-tight text-gray-800">
-                  How can I help with your outlet approach today?
+                  How can I help you with your English today?
                 </h1>
                 <p className="text-gray-600 text-center mb-4 lg:mb-8 max-w-2xl text-sm lg:text-base leading-relaxed">
-                  I'm here to assist you with any queries related to approaching
-                  outlets, understanding competitive advantages, and
-                  strategizing your pitch.
+                  I'm here to train you in English and help you with any queries related to English.
                 </p>
 
                 {/* Suggestion Cards - More compact on mobile */}

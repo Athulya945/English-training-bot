@@ -1,4 +1,4 @@
-import { Listbox } from "@headlessui/react";
+/*import { Listbox } from "@headlessui/react";
 import { ChevronDownIcon } from "@heroicons/react/20/solid";
 
 const modelOptions = [
@@ -46,4 +46,4 @@ export default function ModelSelector({ selectedModel, setSelectedModel }: Model
       </div>
     </div>
   );
-}
+}*/

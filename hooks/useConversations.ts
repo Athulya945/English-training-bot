@@ -46,9 +46,6 @@ export function useConversations() {
   const createConversation = async (title: string) => {
     if (!user) return null
 
-    const { data: session } = await supabase.auth.getSession()
-    console.log("Sessions:_",session)
-
     try {
       const { data, error } = await supabase
         .from('conversations')

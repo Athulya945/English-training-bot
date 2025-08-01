@@ -5,30 +5,36 @@ import { streamText } from "ai";
 export const maxDuration = 30;
 
 // 🧠 Config
-const GEMINI_MODEL = "gemini-2.0-flash";
+const GEMINI_MODEL = "gemini-2.0-flash-exp";
 const GOOGLE_API_KEY = process.env.GOOGLE_GENERATIVE_AI_API_KEY!;
 const GOOGLE_TTS_ENDPOINT = "https://texttospeech.googleapis.com/v1/text:synthesize";
-const GOOGLE_TTS_API_KEY =process.env.GOOGLE_TTS_API_KEY
+const GOOGLE_TTS_API_KEY = process.env.GOOGLE_TTS_API_KEY;
 
 // Validate API key
 if (!GOOGLE_API_KEY) {
   console.error("GOOGLE_API_KEY is not set");
 }
-if(!GOOGLE_TTS_API_KEY){
+if (!GOOGLE_TTS_API_KEY) {
   console.error("GOOGLE_TTS_API_KEY is not set");
 }
 
 // --- 🔊 Google TTS Helper ---
-async function synthesizeSpeech(text: string): Promise<Uint8Array> {
+async function synthesizeSpeech(text: string, accent: string = "en-GB"): Promise<Uint8Array> {
   try {
-    console.log('starting bot...')
+    console.log('Starting TTS synthesis with accent:', accent);
+    const voiceMap: Record<string, string> = {
+      "en-GB": "en-GB-Standard-A",
+      "en-US": "en-US-Standard-C",
+      "en-IN": "en-IN-Standard-A"
+    };
+
     const res = await fetch(`${GOOGLE_TTS_ENDPOINT}?key=${GOOGLE_TTS_API_KEY}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         input: { text },
-        voice: { languageCode: "en-GB", name: "en-GB-Standard-A" },
-        audioConfig: { audioEncoding: "MP3" },
+        voice: { languageCode: accent, name: voiceMap[accent] },
+        audioConfig: { audioEncoding: "MP3", speakingRate: 1.0 },
       }),
     });
 
@@ -51,13 +57,54 @@ async function synthesizeSpeech(text: string): Promise<Uint8Array> {
   }
 }
 
+// --- 🔁 GET Handler for testing ---
+export async function GET() {
+  const status = {
+    googleAIKey: !!GOOGLE_API_KEY,
+    googleTTSKey: !!GOOGLE_TTS_API_KEY,
+    message: "Voice chat API status"
+  };
+  
+  return new Response(JSON.stringify(status), {
+    status: 200,
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
 // --- 🔁 POST Handler ---
 export async function POST(req: Request) {
   try {
     console.log("POST handler started");
 
+    // Check if API keys are configured
+    if (!GOOGLE_API_KEY) {
+      console.error("GOOGLE_API_KEY is not configured");
+      return new Response(
+        JSON.stringify({ 
+          error: "Google AI API key is not configured. Please set GOOGLE_GENERATIVE_AI_API_KEY in your environment variables." 
+        }), {
+          status: 500,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    if (!GOOGLE_TTS_API_KEY) {
+      console.error("GOOGLE_TTS_API_KEY is not configured");
+      return new Response(
+        JSON.stringify({ 
+          error: "Google TTS API key is not configured. Please set GOOGLE_TTS_API_KEY in your environment variables." 
+        }), {
+          status: 500,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+    }
+
     const body = await req.json();
-    const { messages , scenario} = body;
+    const { messages, scenario, userProfile } = body;
+
+    console.log("Request body received:", JSON.stringify(body, null, 2));
 
     if (!messages || !Array.isArray(messages)) {
       return new Response(JSON.stringify({ error: "Invalid messages format" }), {
@@ -74,82 +121,167 @@ export async function POST(req: Request) {
       });
     }
 
-    if(!scenario){
-       return new Response(
-        JSON.stringify({error: "No Scenario details."}),{
-          status: 500,
-          headers: { "Content-Type": "application/json" },
+    console.log("User message:", userMessage);
+
+    // Make scenario optional - provide default if not present
+    const defaultScenario = {
+      name: "general-conversation",
+      mode: "conversation",
+      specialization: "none",
+      prompt: ""
+    };
+
+    const currentScenario = scenario || defaultScenario;
+
+    // Simplified system prompt to avoid overwhelming the model
+    const systemPrompt = `You are a helpful English language tutor. Respond naturally and conversationally to help the user practice English. Keep your responses concise (1-3 sentences) and encouraging.
+
+User Profile:
+- Background: ${userProfile?.background || 'general learner'}
+- Level: ${userProfile?.proficiency || 'intermediate'}
+- Goals: ${userProfile?.goals || 'improve English communication'}
+
+Current scenario: ${currentScenario?.name || 'general conversation'}
+
+Be supportive, provide gentle corrections when needed, and ask follow-up questions to keep the conversation flowing.`;
+
+    console.log("System prompt:", systemPrompt);
+
+    // Step 1: Generate LLM response with better error handling
+    try {
+      console.log("Calling Gemini API...");
+      
+      const result = await streamText({
+        model: google(GEMINI_MODEL),
+        messages: [
+          { role: "system", content: systemPrompt },
+          ...messages
+        ],
+        temperature: 0.7,
+        maxTokens: 200, // Reduced for more focused responses
+      });
+
+      console.log("Gemini API called successfully, processing stream...");
+
+      // Properly consume the stream with timeout
+      let fullText = '';
+      const streamTimeout = setTimeout(() => {
+        throw new Error("Stream processing timeout");
+      }, 10000); // 10 second timeout
+
+      try {
+        for await (const chunk of result.textStream) {
+          fullText += chunk;
+          console.log("Received chunk:", chunk);
         }
-       )
-    }
-
-    const baseSystemPrompt = `
-        You are a voice-based training assistant for the ice cream brand Ideal Ice Creams, based in Mangalore.
-
-        General Behavior Rules:
-        1. Never disclose that you are an AI or mention models like Gemini.
-        2. Respond to greetings casually, without mentioning roles.
-        3. Be brief, realistic, and helpful in voice-based replies.
-        4. Role play the character described in Scenario and respond accordingly. Don't break character — never say things like "I will act as..." or mention being part of a training or simulation. You are not an assistant; you are the actual person described in the scenario.
-        5. Stick to the user’s current scenario mode(sales or game).
-        6. Speak briefly, naturally, and clearly in a way suitable for voice playback.
-        7. If the user says "repeat", restate your last message in a simpler, clearer way.
-        8. Always stay in the active training mode.
-
-        Supported Modes:
-        - **sales**: Act as store-owner or customer depending on scenario; give realistic responses.
-        - **game**: Narrate a gamified training experience; give energetic feedback and simulate decisions.
-        - **default**: If no scenario is active, identify as the Outlet Training Assistant for Ideal Ice Creams and offer general guidance.
-
-        Act according to these instructions:
-        `;
-
-        const scenarioPrompt = scenario?.prompt?.trim();
-        const mode = scenario?.mode?.trim();
-        const systemPrompt = scenarioPrompt
-        ? `${baseSystemPrompt}\n\n---\n\nScenario Instructions:\n${scenarioPrompt}\n\n---\n\nMode: ${mode}`
-        : baseSystemPrompt;
-
-    // Step 1: Generate LLM response
-    const result = await streamText({
-    model: google(GEMINI_MODEL),
-    messages,
-    system: systemPrompt,
-    temperature: 0.7,
-    maxTokens: 1000,
-    });
-
-    // Properly consume the stream
-    let fullText = '';
-    for await (const chunk of result.textStream) {
-    fullText += chunk;
-    }
-    console.log("LLM text generated, synthesizing speech...");
-
-    // Step 2: Convert text to speech
-    const audioBytes = await synthesizeSpeech(fullText);
-    const audioBase64 = Buffer.from(audioBytes).toString("base64");
-
-    // Step 3: Return both text and base64-encoded audio
-    return new Response(
-      JSON.stringify({
-        text: fullText,
-        audio: audioBase64,
-      }),
-      {
-        status: 200,
-        headers: {
-          "Content-Type": "application/json",
-        },
+        clearTimeout(streamTimeout);
+      } catch (streamError) {
+        clearTimeout(streamTimeout);
+        throw streamError;
       }
-    );
+
+      console.log("Complete LLM response:", fullText);
+
+      // Better validation of the response
+      if (!fullText || fullText.trim() === '' || fullText.length < 5) {
+        throw new Error("Empty or invalid response from AI model");
+      }
+
+      console.log("LLM text generated successfully, synthesizing speech...");
+
+      // Step 2: Convert text to speech with accent preference
+      const accent = userProfile?.accentPreference || 'en-GB';
+      const audioBytes = await synthesizeSpeech(fullText, accent);
+      const audioBase64 = Buffer.from(audioBytes).toString("base64");
+
+      console.log("Audio synthesized successfully");
+
+      // Step 3: Return both text and base64-encoded audio
+      return new Response(
+        JSON.stringify({
+          text: fullText,
+          audio: audioBase64,
+          scenarioTips: getScenarioTips(currentScenario),
+          debug: {
+            modelUsed: GEMINI_MODEL,
+            textLength: fullText.length,
+            audioLength: audioBase64.length
+          }
+        }),
+        {
+          status: 200,
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+    } catch (aiError) {
+      console.error("AI model error details:", aiError);
+      
+      // More specific error handling
+      if (aiError instanceof Error) {
+        if (aiError.message.includes('API key')) {
+          throw new Error("Invalid or expired Google AI API key");
+        } else if (aiError.message.includes('quota')) {
+          throw new Error("API quota exceeded - please try again later");
+        } else if (aiError.message.includes('timeout')) {
+          throw new Error("AI model response timeout - please try again");
+        }
+      }
+      
+      // Provide a fallback response when AI fails
+      const fallbackText = "I'm having trouble connecting to my language processing system right now. Let's try a simple conversation - how was your day?";
+      
+      try {
+        const accent = userProfile?.accentPreference || 'en-GB';
+        const audioBytes = await synthesizeSpeech(fallbackText, accent);
+        const audioBase64 = Buffer.from(audioBytes).toString("base64");
+
+        return new Response(
+          JSON.stringify({
+            text: fallbackText,
+            audio: audioBase64,
+            scenarioTips: getScenarioTips(currentScenario),
+            error: "AI model unavailable - using fallback response"
+          }),
+          {
+            status: 200,
+            headers: {
+              "Content-Type": "application/json",
+            },
+          }
+        );
+      } catch (ttsError) {
+        console.error("TTS fallback error:", ttsError);
+        throw new Error("Both AI model and text-to-speech services are unavailable");
+      }
+    }
   } catch (error) {
     console.error("POST handler error:", error);
 
+    // Provide more specific error messages
+    let errorMessage = "Service temporarily unavailable";
+    let errorDetails = "Unknown error";
+
+    if (error instanceof Error) {
+      errorDetails = error.message;
+      
+      if (error.message.includes("API key")) {
+        errorMessage = "API configuration error";
+      } else if (error.message.includes("TTS")) {
+        errorMessage = "Text-to-speech service error";
+      } else if (error.message.includes("quota")) {
+        errorMessage = "API quota exceeded";
+      } else if (error.message.includes("timeout")) {
+        errorMessage = "Request timeout";
+      }
+    }
+
     return new Response(
       JSON.stringify({
-        error: "Service temporarily unavailable",
-        details: error instanceof Error ? error.message : "Unknown error",
+        error: errorMessage,
+        details: errorDetails,
       }),
       {
         status: 500,
@@ -157,4 +289,116 @@ export async function POST(req: Request) {
       }
     );
   }
+}
+
+// Scenario-specific instructions
+function getScenarioInstructions(scenario: any): string {
+  const scenarios: Record<string, string> = {
+    // Engineering Graduates
+    "technical-interview": `
+      You are a tech hiring manager conducting a mock interview:
+      - Focus on technical vocabulary and clarity
+      - Include common interview questions for engineers
+      - Evaluate problem explanation skills
+      - Provide feedback on STAR method responses
+    `,
+    
+    // ITI/Diploma Students
+    "workshop-communication": `
+      You are a senior technician in a workshop:
+      - Use practical, hands-on vocabulary
+      - Focus on safety instructions and tool terminology
+      - Simulate supervisor-worker conversations
+      - Include measurement and precision language
+    `,
+    
+    // Working Professionals
+    "client-presentation": `
+      You are a potential client listening to a pitch:
+      - Evaluate business vocabulary and professionalism
+      - Focus on persuasive language and clarity
+      - Include Q&A about project specifics
+      - Provide feedback on executive presence
+    `,
+    
+    // Business Communication
+    "corporate-email": `
+      You are a senior manager reviewing email drafts:
+      - Focus on formal business writing conventions
+      - Teach concise, professional email structures
+      - Highlight tone adjustments for different recipients
+      - Include common corporate phrases and idioms
+    `,
+    
+    // Academic Researchers
+    "paper-feedback": `
+      You are a journal editor reviewing a paper:
+      - Focus on academic writing conventions
+      - Teach hedging language and citation phrases
+      - Highlight clear data presentation techniques
+      - Provide feedback on argument structure
+    `,
+    
+    // General conversation
+    "general-conversation": `
+      You are an English tutor conducting a general lesson:
+      - Assess the learner's current level
+      - Focus on clear communication
+      - Provide balanced feedback
+      - Adapt to emerging needs
+    `,
+    
+    // Default Scenario
+    "default": `
+      You are an English tutor conducting a general lesson:
+      - Assess the learner's current level
+      - Focus on clear communication
+      - Provide balanced feedback
+      - Adapt to emerging needs
+    `
+  };
+
+  return scenarios[scenario?.name] || scenarios.default;
+}
+
+// Scenario-specific tips
+function getScenarioTips(scenario: any): string[] {
+  const tips: Record<string, string[]> = {
+    "technical-interview": [
+      "Practice explaining projects using the STAR method",
+      "Prepare 2-3 questions to ask the interviewer",
+      "Use technical terms precisely"
+    ],
+    "workshop-communication": [
+      "Learn the names of all tools you use regularly",
+      "Practice giving clear, concise instructions",
+      "Master safety-related vocabulary"
+    ],
+    "client-presentation": [
+      "Structure your pitch: Problem-Solution-Benefit",
+      "Prepare for common objections",
+      "Use transition phrases between topics"
+    ],
+    "corporate-email": [
+      "Use clear subject lines",
+      "Put the main request early",
+      "Proofread for tone before sending"
+    ],
+    "paper-feedback": [
+      "Use hedging language for claims",
+      "Keep methodology descriptions reproducible",
+      "Use signposting in your argument flow"
+    ],
+    "general-conversation": [
+      "Listen carefully before responding",
+      "Note down new vocabulary you encounter",
+      "Don't be afraid to ask for clarification"
+    ]
+  };
+
+  return tips[scenario?.name] || [
+    "Listen carefully before responding",
+    "Note down new vocabulary you encounter",
+    "Don't be afraid to ask for clarification"
+  ];
 }

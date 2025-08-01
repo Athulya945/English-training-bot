@@ -6,13 +6,12 @@ import { AuthProvider } from '@/contexts/AuthContext'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'Outlet Assistant - Ideal Ice Creams',
-  description: 'AI-powered outlet approach assistant for ice cream business',
+  title: 'English Training Bot',
+  description: 'AI-powered English Training Bot',
   icons: {
     icon: '/bot.ico', 
   },
 }
-
 export default function RootLayout({
   children,
 }: {

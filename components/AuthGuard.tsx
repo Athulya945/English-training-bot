@@ -34,9 +34,9 @@ export function AuthGuard({ children }: AuthGuardProps) {
             <User className="w-8 h-8" style={{ color: '#ffffff' }} />
           </div>
           
-          <h1 className="text-2xl font-bold mb-2">Welcome to Outlet Assistant</h1>
+          <h1 className="text-2xl font-bold mb-2">Welcome to learn English with AI</h1>
           <p className="mb-6" style={{ color: '#666666' }}>
-            Sign in to access your personalized ice cream outlet strategy assistant and chat history.
+            Sign in to access your personalized learning assistant and chat history.
           </p>
           
           <Button 

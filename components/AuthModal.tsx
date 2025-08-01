@@ -48,7 +48,10 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
       if (isSignUp) {
         result = await signUp(email, password)
         if (!result.error) {
-          setSuccess('Check your email for confirmation link')
+          setSuccess('Account created successfully! You are now signed in.')
+          setTimeout(() => {
+            onClose()
+          }, 2000)
         }
       } else {
         result = await signIn(email, password)
@@ -58,7 +61,12 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
       }
 
       if (result.error) {
-        setError(result.error.message)
+        // Handle specific email confirmation error
+        if (result.error.message.includes('Email not confirmed')) {
+          setError('Please check your email and click the confirmation link before signing in.')
+        } else {
+          setError(result.error.message)
+        }
       }
     } catch (err) {
       setError('An unexpected error occurred')

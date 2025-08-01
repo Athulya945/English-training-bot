@@ -13,9 +13,6 @@ import {
   User,
   Menu,
   X,
-  Store,
-  TrendingUp,
-  Users,
   Bot,
   Mic,
   MicOff,
@@ -26,23 +23,76 @@ import {
   MessageSquare,
   BarChart3,
   FileText,
+  GraduationCap,
+  Briefcase,
+  UserCog,
+  Languages,
+  TrendingUp,
 } from "lucide-react";
 import clsx from "clsx";
 import { useAuth } from "@/contexts/AuthContext";
 import { useConversations, type Conversation } from "@/hooks/useConversations";
 import { AuthModal } from "@/components/AuthModal";
-import { useModel } from "@/contexts/ModelContext";
-import ModelSelector from "@/components/ModelSelector";
+
 import { MessageBubble } from "./MessageBubble";
 import { GradientOrb } from "./Gradientorb";
 import { PushToTalkBar } from "@/components/PushToTalkBar";
 import Scenarios from "@/utils/Scenarios.json";
 
-// Define message type for better type safety
+// Type declarations for SpeechRecognition
+interface SpeechRecognitionEvent extends Event {
+  results: SpeechRecognitionResultList;
+}
+
+interface SpeechRecognitionErrorEvent extends Event {
+  error: string;
+}
+
+interface SpeechRecognitionResultList {
+  [index: number]: SpeechRecognitionResult;
+  length: number;
+}
+
+interface SpeechRecognitionResult {
+  [index: number]: SpeechRecognitionAlternative;
+  length: number;
+}
+
+interface SpeechRecognitionAlternative {
+  transcript: string;
+  confidence: number;
+}
+
+interface SpeechRecognition extends EventTarget {
+  continuous: boolean;
+  lang: string;
+  interimResults: boolean;
+  start(): void;
+  stop(): void;
+  onresult: ((event: SpeechRecognitionEvent) => void) | null;
+  onerror: ((event: SpeechRecognitionErrorEvent) => void) | null;
+  onend: (() => void) | null;
+}
+
+declare global {
+  interface Window {
+    SpeechRecognition: new () => SpeechRecognition;
+    webkitSpeechRecognition: new () => SpeechRecognition;
+  }
+}
+
 interface ChatMessage {
   id: string;
   role: "user" | "assistant";
   content: string;
+}
+
+interface ScenarioDetails {
+  id: string;
+  name: string;
+  description: string;
+  mode: string;
+  prompt: string;
 }
 
 export default function TrainingChat() {
@@ -62,7 +112,6 @@ export default function TrainingChat() {
     window.SpeechRecognition || window.webkitSpeechRecognition;
   const recognitionRef = useRef<SpeechRecognition | null>(null);
 
-  // Initialize speech recognition
   useEffect(() => {
     if (SpeechRecognition) {
       const recognition = new SpeechRecognition();
@@ -79,10 +128,11 @@ export default function TrainingChat() {
   const [isLoadingConversation, setIsLoadingConversation] = useState(false);
   const [activeTab, setActiveTab] = useState("scenarios");
   const [isRecording, setIsRecording] = useState(false);
-  const [currentMode, setCurrentMode] = useState("sales");
+  const [currentMode, setCurrentMode] = useState("conversation");
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [learnerType, setLearnerType] = useState("engineering");
 
   const loadedConversationRef = useRef(null);
   const currentConversationRef = useRef(null);
@@ -93,14 +143,13 @@ export default function TrainingChat() {
     currentConversationRef.current = currentConversationId;
   }, [currentConversationId]);
 
-  // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     if (bottomRef.current) {
       bottomRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [chatMessages]);
 
-  const { selectedModel, setSelectedModel } = useModel();
+
 
   useEffect(() => {
     const setAppHeight = () => {
@@ -112,7 +161,6 @@ export default function TrainingChat() {
 
     setAppHeight();
     window.addEventListener("resize", setAppHeight);
-    handleScenarioClick("retail-pitch");
     return () => window.removeEventListener("resize", setAppHeight);
   }, []);
 
@@ -128,20 +176,19 @@ export default function TrainingChat() {
   }, [signOut]);
 
   const [activeScenarioId, setActiveScenarioId] = useState<string | null>(null);
-  const [scenarioDetails, setScenarioDetails] = useState(null);
+  const [scenarioDetails, setScenarioDetails] = useState<ScenarioDetails | null>(null);
 
   const handleScenarioClick = (scenarioId: string) => {
     setActiveScenarioId(scenarioId);
     const found = Scenarios.find((s) => s.id === scenarioId);
-    setScenarioDetails(found);
+    setScenarioDetails(found || null);
     setChatMessages([]);
 
     if (!found) {
-      console.error("Didn't find any matching scenario!!");
+      console.error("Scenario not found");
     }
   };
 
-  // Add message to chat
   const addMessage = useCallback(
     (role: "user" | "assistant", content: string) => {
       const newMessage: ChatMessage = {
@@ -154,16 +201,12 @@ export default function TrainingChat() {
     []
   );
 
-  // Send text to API and handle audio response
   const sendMessageToAPI = useCallback(
     async (text: string) => {
       try {
-        // Add user message to chat
         addMessage("user", text);
-
         setIsLoading(true);
 
-        // Prepare messages for API (include conversation history)
         const messages = [
           ...chatMessages.map((msg) => ({
             role: msg.role,
@@ -172,7 +215,6 @@ export default function TrainingChat() {
           { role: "user", content: text },
         ];
 
-        // Send to API
         const response = await fetch("/api/voicechat", {
           method: "POST",
           headers: {
@@ -180,39 +222,32 @@ export default function TrainingChat() {
           },
           body: JSON.stringify({
             messages,
-            scenario: scenarioDetails, // Include current mode
+            scenario: scenarioDetails,
+            userProfile: {
+              background: learnerType,
+              proficiency: "intermediate",
+              goals: "improve English skills",
+              accentPreference: "en-US"
+            }
           }),
         });
 
         if (!response.ok) {
-          throw new Error(
-            `API Error: ${response.status} ${response.statusText}`
-          );
+          throw new Error(`API Error: ${response.status} ${response.statusText}`);
         }
 
-        // Parse JSON { text, audio }
         const data = await response.json();
-
-        if (!data.text || !data.audio) {
-          throw new Error("Incomplete response from server");
-        }
-
-        // Add assistant text to chat
         setIsLoading(false);
 
         addMessage("assistant", data.text);
 
-        // Decode base64 audio
-        const base64 = data.audio.split(",")[1] || data.audio; // Remove "data:audio/mp3;base64," if present
+        const base64 = data.audio.split(",")[1] || data.audio;
         const audioBlob = new Blob(
           [Uint8Array.from(atob(base64), (c) => c.charCodeAt(0))],
-          {
-            type: "audio/mpeg",
-          }
+          { type: "audio/mpeg" }
         );
         const audioUrl = URL.createObjectURL(audioBlob);
 
-        // Play audio
         if (audioRef.current) {
           audioRef.current.src = audioUrl;
           setIsPlayingAudio(true);
@@ -231,7 +266,6 @@ export default function TrainingChat() {
           await audioRef.current.play();
         }
 
-        // Save to conversation if needed
         if (currentConversationId) {
           try {
             await saveMessage(currentConversationId, "user", text);
@@ -241,57 +275,45 @@ export default function TrainingChat() {
             console.error("Failed to save messages:", error);
           }
         }
-      } catch (error) {
-        console.error("Error sending message:", error);
-        addMessage(
-          "assistant",
-          "Sorry, I encountered an error. Please try again."
-        );
-      }
+             } catch (error) {
+         console.error("Error sending message:", error);
+         setIsLoading(false);
+         
+         let errorMessage = "Sorry, I encountered an error. Please try again.";
+         
+         if (error instanceof Error) {
+           if (error.message.includes("API key")) {
+             errorMessage = "API configuration error. Please check your environment variables.";
+           } else if (error.message.includes("network")) {
+             errorMessage = "Network error. Please check your internet connection.";
+           } else if (error.message.includes("timeout")) {
+             errorMessage = "Request timeout. Please try again.";
+           }
+         }
+         
+         addMessage("assistant", errorMessage);
+       }
     },
-    [
-      chatMessages,
-      currentMode,
-      currentConversationId,
-      addMessage,
-      saveMessage,
-      refetchConversations,
-    ]
+    [chatMessages, currentConversationId, addMessage, saveMessage, refetchConversations, scenarioDetails, learnerType]
   );
 
   const handleStartRecording = useCallback(() => {
     const recognition = recognitionRef.current;
     if (!recognition) {
-      alert("Speech Recognition is not supported in this browser.");
+      alert("Speech Recognition not supported");
       return;
     }
 
     setIsRecording(true);
 
-    recognition.onstart = () => {
-      console.log("Speech recognition started");
-    };
-
-    recognition.onresult = (event) => {
+    recognition.onresult = (event: SpeechRecognitionEvent) => {
       const transcript = event.results[0][0].transcript;
-      console.log("Transcribed:", transcript);
-
-      // Send the transcribed text to API
       sendMessageToAPI(transcript);
     };
 
-    recognition.onerror = (event) => {
+    recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
       console.error("Speech recognition error:", event.error);
       setIsRecording(false);
-
-      // Handle specific errors
-      if (event.error === "not-allowed") {
-        alert(
-          "Microphone access denied. Please allow microphone access and try again."
-        );
-      } else if (event.error === "no-speech") {
-        console.log("No speech detected, stopping recording");
-      }
     };
 
     recognition.onend = () => {
@@ -317,34 +339,43 @@ export default function TrainingChat() {
   const handleBackToScenarios = useCallback(() => {
     setActiveTab("scenarios");
   }, []);
+  const trainingModeList = ["conversation", "pronunciation", "grammar", "scenario"];
 
-  const handleToggleMode = useCallback(() => {
-    setCurrentMode((prev) => (prev === "sales" ? "game" : "sales"));
-  }, []);
-
-  // Clear chat messages when mode changes
-  useEffect(() => {
+  const handleToggleMode = useCallback((mode?: string) => {
+    const nextMode = mode
+      ? mode
+      : trainingModeList[
+          (trainingModeList.indexOf(currentMode) + 1) % trainingModeList.length
+        ];
+    setCurrentMode(nextMode);
     setChatMessages([]);
   }, [currentMode]);
+ 
 
   const sidebarTabs = [
     { id: "scenarios", label: "Scenarios", icon: FileText },
-    { id: "dashboard", label: "Dashboard", icon: BarChart3 },
-    { id: "chat-history", label: "Chat History", icon: MessageSquare },
+    { id: "dashboard", label: "Progress", icon: BarChart3 },
+    //{ id: "chat-history", label: "History", icon: MessageSquare },
   ];
 
-  const messageEndRef = useRef<HTMLDivElement | null>(null);
+  const learnerTypes = [
+    { id: "engineering", label: "Engineering", icon: UserCog },
+    { id: "iti", label: "ITI/Diploma", icon: GraduationCap },
+    { id: "professional", label: "Professional", icon: Briefcase },
+    { id: "business", label: "Business", icon: TrendingUp },
+  ];
 
-  useEffect(() => {
-    messageEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [chatMessages]);
+  const trainingModes = [
+    { id: "conversation", label: "Conversation", icon: MessageSquare },
+    { id: "pronunciation", label: "Pronunciation", icon: Mic },
+    { id: "grammar", label: "Grammar", icon: Languages },
+    { id: "scenario", label: "Scenarios", icon: FileText },
+  ];
 
   return (
     <div className="flex bg-stone-50 text-gray-800 h-screen overflow-hidden">
-      {/* Hidden audio element for playback */}
       <audio ref={audioRef} style={{ display: "none" }} />
 
-      {/* Mobile Menu Overlay */}
       {isMobileMenuOpen && (
         <div
           className="fixed inset-0 bg-black/50 z-40 lg:hidden backdrop-blur-sm"
@@ -352,7 +383,6 @@ export default function TrainingChat() {
         />
       )}
 
-      {/* Sidebar - Full Height */}
       <div
         className={clsx(
           "fixed lg:relative lg:translate-x-0 transition-transform duration-300 ease-in-out z-50",
@@ -360,7 +390,6 @@ export default function TrainingChat() {
           isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
-        {/* Mobile Close Button */}
         <div className="lg:hidden flex justify-end p-3 border-b border-gray-100">
           <Button
             variant="ghost"
@@ -372,15 +401,14 @@ export default function TrainingChat() {
           </Button>
         </div>
 
-        {/* Header */}
-        <div className="p-4 lg:p-5 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-orange-50">
+        <div className="p-4 lg:p-5 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-blue-50">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-orange-500 flex items-center justify-center">
-                <Store className="w-4 h-4 text-white" />
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center">
+                <Languages className="w-4 h-4 text-white" />
               </div>
               <span className="font-semibold text-base text-gray-800">
-                Training Assistant
+                English Trainer
               </span>
             </div>
             <Button
@@ -398,7 +426,6 @@ export default function TrainingChat() {
             {user?.email}
           </div>
 
-          {/* Navigation Tabs */}
           <div className="space-y-1">
             {sidebarTabs.map((tab) => {
               const Icon = tab.icon;
@@ -411,7 +438,7 @@ export default function TrainingChat() {
                   className={clsx(
                     "w-full justify-start gap-3 text-sm py-3 rounded-lg transition-all duration-200",
                     activeTab === tab.id
-                      ? "bg-gradient-to-r from-purple-500 to-purple-600 text-white shadow-md hover:from-purple-600 hover:to-purple-700"
+                      ? "bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-md hover:from-blue-600 hover:to-purple-700"
                       : "text-gray-600 hover:text-gray-800 hover:bg-white/60"
                   )}
                 >
@@ -423,170 +450,333 @@ export default function TrainingChat() {
           </div>
         </div>
 
-        {/* Tab Content */}
         <ScrollArea className="flex-1 p-4 lg:p-5">
-          {activeTab === "scenarios" && currentMode === "sales" && (
+          {activeTab === "scenarios" && (
             <div className="space-y-4">
-              <h3 className="font-semibold text-gray-800 mb-4 text-lg">
-                Sales Training Scenarios
+              <h3 className="font-semibold text-gray-800 mb-2 text-lg">
+                Learner Profile
               </h3>
-              <div className="space-y-3">
-                <Card
-                  onClick={() => handleScenarioClick("retail-pitch")}
-                  className={`p-4 cursor-pointer transition-all duration-200 border 
-                      ${
-                        activeScenarioId === "retail-pitch"
-                          ? "bg-gradient-to-r from-gray-100 to-purple-100 border-purple-300 shadow-md"
-                          : "border-gray-200 hover:bg-gradient-to-r hover:from-gray-50 hover:to-purple-50 hover:border-purple-200 hover:shadow-md"
-                      }
-                    `}
-                >
-                  <h4 className="text-sm font-semibold text-gray-800 mb-1">
-                    Retail Outlet Pitch
-                  </h4>
-                  <p className="text-xs text-gray-600">
-                    Learn how to introduce Ideal Ice Creams to new outlets.
-                  </p>
-                </Card>
-
-                <Card
-                  onClick={() => handleScenarioClick("upsell-pushcart")}
-                  className={`p-4 cursor-pointer transition-all duration-200 border 
-                      ${
-                        activeScenarioId === "upsell-pushcart"
-                          ? "bg-gradient-to-r from-gray-100 to-orange-100 border-orange-300 shadow-md"
-                          : "border-gray-200 hover:bg-gradient-to-r hover:from-gray-50 hover:to-orange-50 hover:border-orange-200 hover:shadow-md"
-                      }
-                    `}
-                >
-                  <h4 className="text-sm font-semibold text-gray-800 mb-1">
-                    Upselling at Pushcart
-                  </h4>
-                  <p className="text-xs text-gray-600">
-                    Practice turning basic orders into high-value sales.
-                  </p>
-                </Card>
-
-                <Card
-                  onClick={() => handleScenarioClick("price-objection")}
-                  className={`p-4 cursor-pointer transition-all duration-200 border 
-                      ${
-                        activeScenarioId === "price-objection"
-                          ? "bg-gradient-to-r from-gray-100 to-green-100 border-green-300 shadow-md"
-                          : "border-gray-200 hover:bg-gradient-to-r hover:from-gray-50 hover:to-green-50 hover:border-green-200 hover:shadow-md"
-                      }
-                    `}
-                >
-                  <h4 className="text-sm font-semibold text-gray-800 mb-1">
-                    Price Objection Handling
-                  </h4>
-                  <p className="text-xs text-gray-600">
-                    Learn to confidently handle concerns about pricing.
-                  </p>
-                </Card>
-
-                <Card
-                  onClick={() => handleScenarioClick("restaurant-pitch")}
-                  className={`p-4 cursor-pointer transition-all duration-200 border 
-                      ${
-                        activeScenarioId === "restaurant-pitch"
-                          ? "bg-gradient-to-r from-gray-100 to-blue-100 border-blue-300 shadow-md"
-                          : "border-gray-200 hover:bg-gradient-to-r hover:from-gray-50 hover:to-blue-50 hover:border-blue-200 hover:shadow-md"
-                      }
-                    `}
-                >
-                  <h4 className="text-sm font-semibold text-gray-800 mb-1">
-                    Restaurant Dessert Pitch
-                  </h4>
-                  <p className="text-xs text-gray-600">
-                    Pitch dessert solutions to restaurants that don't yet serve
-                    ice cream.
-                  </p>
-                </Card>
+              <div className="grid grid-cols-2 gap-2 mb-4">
+                {learnerTypes.map((type) => (
+                  <Button
+                    key={type.id}
+                    variant={learnerType === type.id ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setLearnerType(type.id)}
+                    className={clsx(
+                      "text-xs h-10",
+                      learnerType === type.id
+                        ? "bg-blue-500 text-white"
+                        : "text-gray-600"
+                    )}
+                  >
+                    {type.label}
+                  </Button>
+                ))}
               </div>
-            </div>
-          )}
 
-          {activeTab === "scenarios" && currentMode === "game" && (
-            <div className="space-y-4">
-              <h3 className="font-semibold text-gray-800 mb-4 text-lg">
-                Interactive Game Scenarios
+              <h3 className="font-semibold text-gray-800 mb-2 text-lg">
+                Training Mode
               </h3>
+              <div className="grid grid-cols-2 gap-2 mb-6">
+                {trainingModes.map((mode) => (
+                  <Button
+                    key={mode.id}
+                    variant={currentMode === mode.id ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => handleToggleMode(mode.id)}
+                    className={clsx(
+                      "text-xs h-10",
+                      currentMode === mode.id
+                        ? "bg-purple-500 text-white"
+                        : "text-gray-600"
+                    )}
+                  >
+                    {mode.label}
+                  </Button>
+                ))}
+              </div>
+
+              <h3 className="font-semibold text-gray-800 mb-4 text-lg">
+                {currentMode === "conversation" && "Conversation Topics"}
+                {currentMode === "pronunciation" && "Pronunciation Drills"}
+                {currentMode === "grammar" && "Grammar Exercises"}
+                {currentMode === "scenario" && "Practice Scenarios"}
+              </h3>
+
               <div className="space-y-3">
-                <Card
-                  onClick={() => handleScenarioClick("distributor-onboarding")}
-                  className={`p-4 cursor-pointer transition-all duration-200 border 
-                    ${
-                      activeScenarioId === "distributor-onboarding"
-                        ? "bg-gradient-to-r from-gray-100 to-blue-100 border-blue-300 shadow-md"
-                        : "border-gray-200 hover:bg-gradient-to-r hover:from-gray-50 hover:to-blue-50 hover:border-blue-200 hover:shadow-md"
-                    }
-                  `}
-                >
-                  <h4 className="text-sm font-semibold text-gray-800 mb-1">
-                    Distributor Onboarding
-                  </h4>
-                  <p className="text-xs text-gray-600">
-                    Guide a new distributor through initial onboarding setup.
-                  </p>
-                </Card>
+                {currentMode === "conversation" && (
+                  <>
+                    <Card
+                      onClick={() => handleScenarioClick("daily-life")}
+                      className={`p-4 cursor-pointer transition-all duration-200 border 
+                        ${
+                          activeScenarioId === "daily-life"
+                            ? "bg-gradient-to-r from-gray-100 to-blue-100 border-blue-300 shadow-md"
+                            : "border-gray-200 hover:bg-gradient-to-r hover:from-gray-50 hover:to-blue-50 hover:border-blue-200 hover:shadow-md"
+                        }
+                      `}
+                    >
+                      <h4 className="text-sm font-semibold text-gray-800 mb-1">
+                        Daily Life Conversations
+                      </h4>
+                      <p className="text-xs text-gray-600">
+                        Practice common everyday dialogues
+                      </p>
+                    </Card>
+                    <Card
+                      onClick={() => handleScenarioClick("hobbies")}
+                      className={`p-4 cursor-pointer transition-all duration-200 border 
+                        ${
+                          activeScenarioId === "hobbies"
+                            ? "bg-gradient-to-r from-gray-100 to-green-100 border-green-300 shadow-md"
+                            : "border-gray-200 hover:bg-gradient-to-r hover:from-gray-50 hover:to-green-50 hover:border-green-200 hover:shadow-md"
+                        }
+                      `}
+                    >
+                      <h4 className="text-sm font-semibold text-gray-800 mb-1">
+                        Hobbies & Interests
+                      </h4>
+                      <p className="text-xs text-gray-600">
+                        Talk about your favorite activities
+                      </p>
+                    </Card>
+                  </>
+                )}
 
-                <Card
-                  onClick={() => handleScenarioClick("distributor-interview")}
-                  className={`p-4 cursor-pointer transition-all duration-200 border 
-                    ${
-                      activeScenarioId === "distributor-interview"
-                        ? "bg-gradient-to-r from-gray-100 to-green-100 border-green-300 shadow-md"
-                        : "border-gray-200 hover:bg-gradient-to-r hover:from-gray-50 hover:to-green-50 hover:border-green-200 hover:shadow-md"
-                    }
-                  `}
-                >
-                  <h4 className="text-sm font-semibold text-gray-800 mb-1">
-                    Distributor Interview
-                  </h4>
-                  <p className="text-xs text-gray-600">
-                    Assess a distributor’s experience, reach, and setup.
-                  </p>
-                </Card>
+                {currentMode === "pronunciation" && (
+                  <>
+                    <Card
+                      onClick={() => handleScenarioClick("minimal-pairs")}
+                      className={`p-4 cursor-pointer transition-all duration-200 border 
+                        ${
+                          activeScenarioId === "minimal-pairs"
+                            ? "bg-gradient-to-r from-gray-100 to-purple-100 border-purple-300 shadow-md"
+                            : "border-gray-200 hover:bg-gradient-to-r hover:from-gray-50 hover:to-purple-50 hover:border-purple-200 hover:shadow-md"
+                        }
+                      `}
+                    >
+                      <h4 className="text-sm font-semibold text-gray-800 mb-1">
+                        Minimal Pairs
+                      </h4>
+                      <p className="text-xs text-gray-600">
+                        Practice similar sounding words
+                      </p>
+                    </Card>
+                    <Card
+                      onClick={() => handleScenarioClick("intonation")}
+                      className={`p-4 cursor-pointer transition-all duration-200 border 
+                        ${
+                          activeScenarioId === "intonation"
+                            ? "bg-gradient-to-r from-gray-100 to-orange-100 border-orange-300 shadow-md"
+                            : "border-gray-200 hover:bg-gradient-to-r hover:from-gray-50 hover:to-orange-50 hover:border-orange-200 hover:shadow-md"
+                        }
+                      `}
+                    >
+                      <h4 className="text-sm font-semibold text-gray-800 mb-1">
+                        Intonation Practice
+                      </h4>
+                      <p className="text-xs text-gray-600">
+                        Work on sentence rhythm and stress
+                      </p>
+                    </Card>
+                  </>
+                )}
 
-                
-                <Card
-                  onClick={() => handleScenarioClick("melting-stock")}
-                  className={`p-4 cursor-pointer transition-all duration-200 border 
-                      ${
-                        activeScenarioId === "melting-stock"
-                          ? "bg-gradient-to-r from-gray-100 to-red-100 border-red-300 shadow-md"
-                          : "border-gray-200 hover:bg-gradient-to-r hover:from-gray-50 hover:to-red-50 hover:border-red-200 hover:shadow-md"
-                      }
-                    `}
-                >
-                  <h4 className="text-sm font-semibold text-gray-800 mb-1">
-                    Melting Stock Challenge
-                  </h4>
-                  <p className="text-xs text-gray-600">
-                    Respond to an unhappy customer with empathy and quick
-                    action.
-                  </p>
-                </Card>
+                {currentMode === "grammar" && (
+                  <>
+                    <Card
+                      onClick={() => handleScenarioClick("tenses")}
+                      className={`p-4 cursor-pointer transition-all duration-200 border 
+                        ${
+                          activeScenarioId === "tenses"
+                            ? "bg-gradient-to-r from-gray-100 to-red-100 border-red-300 shadow-md"
+                            : "border-gray-200 hover:bg-gradient-to-r hover:from-gray-50 hover:to-red-50 hover:border-red-200 hover:shadow-md"
+                        }
+                      `}
+                    >
+                      <h4 className="text-sm font-semibold text-gray-800 mb-1">
+                        Verb Tenses
+                      </h4>
+                      <p className="text-xs text-gray-600">
+                        Practice past, present and future forms
+                      </p>
+                    </Card>
+                    <Card
+                      onClick={() => handleScenarioClick("articles")}
+                      className={`p-4 cursor-pointer transition-all duration-200 border 
+                        ${
+                          activeScenarioId === "articles"
+                            ? "bg-gradient-to-r from-gray-100 to-indigo-100 border-indigo-300 shadow-md"
+                            : "border-gray-200 hover:bg-gradient-to-r hover:from-gray-50 hover:to-indigo-50 hover:border-indigo-200 hover:shadow-md"
+                        }
+                      `}
+                    >
+                      <h4 className="text-sm font-semibold text-gray-800 mb-1">
+                        Articles (a/an/the)
+                      </h4>
+                      <p className="text-xs text-gray-600">
+                        Master proper article usage
+                      </p>
+                    </Card>
+                  </>
+                )}
 
-                <Card
-                  onClick={() => handleScenarioClick("bulk-order")}
-                  className={`p-4 cursor-pointer transition-all duration-200 border 
-                      ${
-                        activeScenarioId === "bulk-order"
-                          ? "bg-gradient-to-r from-gray-100 to-indigo-100 border-indigo-300 shadow-md"
-                          : "border-gray-200 hover:bg-gradient-to-r hover:from-gray-50 hover:to-indigo-50 hover:border-indigo-200 hover:shadow-md"
-                      }
-                    `}
-                >
-                  <h4 className="text-sm font-semibold text-gray-800 mb-1">
-                    Bulk Party Order
-                  </h4>
-                  <p className="text-xs text-gray-600">
-                    Negotiate a deal for a large order and unlock bonus sales
-                    points.
-                  </p>
-                </Card>
+                {currentMode === "scenario" && learnerType === "engineering" && (
+                  <>
+                    <Card
+                      onClick={() => handleScenarioClick("tech-interview")}
+                      className={`p-4 cursor-pointer transition-all duration-200 border 
+                        ${
+                          activeScenarioId === "tech-interview"
+                            ? "bg-gradient-to-r from-gray-100 to-blue-100 border-blue-300 shadow-md"
+                            : "border-gray-200 hover:bg-gradient-to-r hover:from-gray-50 hover:to-blue-50 hover:border-blue-200 hover:shadow-md"
+                        }
+                      `}
+                    >
+                      <h4 className="text-sm font-semibold text-gray-800 mb-1">
+                        Technical Interview
+                      </h4>
+                      <p className="text-xs text-gray-600">
+                        Practice answering technical questions
+                      </p>
+                    </Card>
+                    <Card
+                      onClick={() => handleScenarioClick("project-presentation")}
+                      className={`p-4 cursor-pointer transition-all duration-200 border 
+                        ${
+                          activeScenarioId === "project-presentation"
+                            ? "bg-gradient-to-r from-gray-100 to-green-100 border-green-300 shadow-md"
+                            : "border-gray-200 hover:bg-gradient-to-r hover:from-gray-50 hover:to-green-50 hover:border-green-200 hover:shadow-md"
+                        }
+                      `}
+                    >
+                      <h4 className="text-sm font-semibold text-gray-800 mb-1">
+                        Project Presentation
+                      </h4>
+                      <p className="text-xs text-gray-600">
+                        Practice explaining technical projects
+                      </p>
+                    </Card>
+                  </>
+                )}
+
+                {currentMode === "scenario" && learnerType === "iti" && (
+                  <>
+                    <Card
+                      onClick={() => handleScenarioClick("workshop")}
+                      className={`p-4 cursor-pointer transition-all duration-200 border 
+                        ${
+                          activeScenarioId === "workshop"
+                            ? "bg-gradient-to-r from-gray-100 to-orange-100 border-orange-300 shadow-md"
+                            : "border-gray-200 hover:bg-gradient-to-r hover:from-gray-50 hover:to-orange-50 hover:border-orange-200 hover:shadow-md"
+                        }
+                      `}
+                    >
+                      <h4 className="text-sm font-semibold text-gray-800 mb-1">
+                        Workshop Communication
+                      </h4>
+                      <p className="text-xs text-gray-600">
+                        Practice technical instructions
+                      </p>
+                    </Card>
+                    <Card
+                      onClick={() => handleScenarioClick("tools")}
+                      className={`p-4 cursor-pointer transition-all duration-200 border 
+                        ${
+                          activeScenarioId === "tools"
+                            ? "bg-gradient-to-r from-gray-100 to-purple-100 border-purple-300 shadow-md"
+                            : "border-gray-200 hover:bg-gradient-to-r hover:from-gray-50 hover:to-purple-50 hover:border-purple-200 hover:shadow-md"
+                        }
+                      `}
+                    >
+                      <h4 className="text-sm font-semibold text-gray-800 mb-1">
+                        Tools & Equipment
+                      </h4>
+                      <p className="text-xs text-gray-600">
+                        Learn names of common tools
+                      </p>
+                    </Card>
+                  </>
+                )}
+
+                {currentMode === "scenario" && learnerType === "professional" && (
+                  <>
+                    <Card
+                      onClick={() => handleScenarioClick("meeting")}
+                      className={`p-4 cursor-pointer transition-all duration-200 border 
+                        ${
+                          activeScenarioId === "meeting"
+                            ? "bg-gradient-to-r from-gray-100 to-blue-100 border-blue-300 shadow-md"
+                            : "border-gray-200 hover:bg-gradient-to-r hover:from-gray-50 hover:to-blue-50 hover:border-blue-200 hover:shadow-md"
+                        }
+                      `}
+                    >
+                      <h4 className="text-sm font-semibold text-gray-800 mb-1">
+                        Business Meeting
+                      </h4>
+                      <p className="text-xs text-gray-600">
+                        Practice professional discussions
+                      </p>
+                    </Card>
+                    <Card
+                      onClick={() => handleScenarioClick("presentation")}
+                      className={`p-4 cursor-pointer transition-all duration-200 border 
+                        ${
+                          activeScenarioId === "presentation"
+                            ? "bg-gradient-to-r from-gray-100 to-green-100 border-green-300 shadow-md"
+                            : "border-gray-200 hover:bg-gradient-to-r hover:from-gray-50 hover:to-green-50 hover:border-green-200 hover:shadow-md"
+                        }
+                      `}
+                    >
+                      <h4 className="text-sm font-semibold text-gray-800 mb-1">
+                        Client Presentation
+                      </h4>
+                      <p className="text-xs text-gray-600">
+                        Practice pitching ideas professionally
+                      </p>
+                    </Card>
+                  </>
+                )}
+
+                {currentMode === "scenario" && learnerType === "business" && (
+                  <>
+                    <Card
+                      onClick={() => handleScenarioClick("negotiation")}
+                      className={`p-4 cursor-pointer transition-all duration-200 border 
+                        ${
+                          activeScenarioId === "negotiation"
+                            ? "bg-gradient-to-r from-gray-100 to-purple-100 border-purple-300 shadow-md"
+                            : "border-gray-200 hover:bg-gradient-to-r hover:from-gray-50 hover:to-purple-50 hover:border-purple-200 hover:shadow-md"
+                        }
+                      `}
+                    >
+                      <h4 className="text-sm font-semibold text-gray-800 mb-1">
+                        Business Negotiation
+                      </h4>
+                      <p className="text-xs text-gray-600">
+                        Practice deal-making conversations
+                      </p>
+                    </Card>
+                    <Card
+                      onClick={() => handleScenarioClick("email")}
+                      className={`p-4 cursor-pointer transition-all duration-200 border 
+                        ${
+                          activeScenarioId === "email"
+                            ? "bg-gradient-to-r from-gray-100 to-red-100 border-red-300 shadow-md"
+                            : "border-gray-200 hover:bg-gradient-to-r hover:from-gray-50 hover:to-red-50 hover:border-red-200 hover:shadow-md"
+                        }
+                      `}
+                    >
+                      <h4 className="text-sm font-semibold text-gray-800 mb-1">
+                        Email Writing
+                      </h4>
+                      <p className="text-xs text-gray-600">
+                        Practice professional email communication
+                      </p>
+                    </Card>
+                  </>
+                )}
               </div>
             </div>
           )}
@@ -594,7 +784,7 @@ export default function TrainingChat() {
           {activeTab === "dashboard" && (
             <div className="space-y-4">
               <h3 className="font-semibold text-gray-800 mb-4 text-lg">
-                Performance Dashboard
+                Learning Progress
               </h3>
               <div className="space-y-4">
                 <Card className="p-4 bg-gradient-to-r from-blue-50 to-blue-100 border-blue-200">
@@ -602,26 +792,36 @@ export default function TrainingChat() {
                     <span className="text-sm font-medium text-gray-700">
                       Sessions Completed
                     </span>
-                    <span className="font-bold text-xl text-blue-600">12</span>
+                    <span className="font-bold text-xl text-blue-600">24</span>
                   </div>
                 </Card>
                 <Card className="p-4 bg-gradient-to-r from-green-50 to-green-100 border-green-200">
                   <div className="flex justify-between items-center">
                     <span className="text-sm font-medium text-gray-700">
-                      Average Score
+                      Pronunciation Score
                     </span>
                     <span className="font-bold text-xl text-green-600">
-                      8.5/10
+                      8.7/10
                     </span>
                   </div>
                 </Card>
                 <Card className="p-4 bg-gradient-to-r from-purple-50 to-purple-100 border-purple-200">
                   <div className="flex justify-between items-center">
                     <span className="text-sm font-medium text-gray-700">
-                      Time Practiced
+                      Grammar Accuracy
                     </span>
                     <span className="font-bold text-xl text-purple-600">
-                      4.2h
+                      92%
+                    </span>
+                  </div>
+                </Card>
+                <Card className="p-4 bg-gradient-to-r from-orange-50 to-orange-100 border-orange-200">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium text-gray-700">
+                      Active Vocabulary
+                    </span>
+                    <span className="font-bold text-xl text-orange-600">
+                      1,240 words
                     </span>
                   </div>
                 </Card>
@@ -632,31 +832,31 @@ export default function TrainingChat() {
           {activeTab === "chat-history" && (
             <div className="space-y-4">
               <h3 className="font-semibold text-gray-800 mb-4 text-lg">
-                Recent Conversations
+                Practice History
               </h3>
               <div className="space-y-3">
                 <Card className="p-4 hover:bg-gray-50 cursor-pointer transition-all duration-200 border border-gray-200 hover:shadow-md">
                   <h4 className="text-sm font-semibold text-gray-800 mb-1">
-                    Sales Call Practice
+                    Technical Interview Practice
                   </h4>
                   <p className="text-xs text-gray-500">
-                    2 hours ago • 15 messages
+                    2 days ago • 18 messages
                   </p>
                 </Card>
                 <Card className="p-4 hover:bg-gray-50 cursor-pointer transition-all duration-200 border border-gray-200 hover:shadow-md">
                   <h4 className="text-sm font-semibold text-gray-800 mb-1">
-                    Product Demo Training
+                    Pronunciation Drill
                   </h4>
                   <p className="text-xs text-gray-500">
-                    Yesterday • 23 messages
+                    1 week ago • 32 exercises
                   </p>
                 </Card>
                 <Card className="p-4 hover:bg-gray-50 cursor-pointer transition-all duration-200 border border-gray-200 hover:shadow-md">
                   <h4 className="text-sm font-semibold text-gray-800 mb-1">
-                    Negotiation Practice
+                    Business Email Writing
                   </h4>
                   <p className="text-xs text-gray-500">
-                    3 days ago • 18 messages
+                    2 weeks ago • 12 emails
                   </p>
                 </Card>
               </div>
@@ -665,9 +865,7 @@ export default function TrainingChat() {
         </ScrollArea>
       </div>
 
-      {/* Main Chat Area */}
       <div className="flex-1 flex flex-col min-w-0 h-screen bg-stone-50 relative">
-        {/* Header */}
         <div className="h-16 px-4 lg:px-6 flex items-center justify-between flex-shrink-0 bg-white border-b border-gray-200 shadow-sm">
           <div className="flex items-center gap-3 min-w-0">
             <Button
@@ -678,10 +876,7 @@ export default function TrainingChat() {
             >
               <Menu className="w-5 h-5" />
             </Button>
-            <ModelSelector
-              selectedModel={selectedModel}
-              setSelectedModel={setSelectedModel}
-            />
+
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
             <Button
@@ -702,33 +897,21 @@ export default function TrainingChat() {
           </div>
         </div>
 
-        {/* Loading Conversation */}
-        {isLoadingConversation && (
-          <div className="p-4 bg-blue-50 border-l-4 border-blue-400 text-blue-800 flex-shrink-0">
-            <p className="text-sm">Loading conversation...</p>
-          </div>
-        )}
-
-        {/* Chat Content */}
         <div className="flex-1 flex flex-col min-h-0 pb-32 overflow-hidden">
-          {/* Gradient Orb */}
           <GradientOrb isSpeaking={isPlayingAudio} isLoading={isLoading} />
 
-          {/* Chat Messages */}
           <ScrollArea className="flex-1 px-4 lg:px-6">
             <div className="max-w-4xl max-h-[200px] overflow-y-auto mx-auto scrollbar-hide">
               {chatMessages.length === 0 ? (
                 <div className="text-center text-gray-500 py-8">
                   <h2 className="text-xl font-semibold mb-3 text-gray-700">
-                    Ready for your{" "}
-                    {currentMode === "sales"
-                      ? "sales training"
-                      : "practice game"}
-                    ?
+                    {currentMode === "conversation" && "Start a conversation"}
+                    {currentMode === "pronunciation" && "Begin pronunciation practice"}
+                    {currentMode === "grammar" && "Try a grammar exercise"}
+                    {currentMode === "scenario" && "Select a scenario to practice"}
                   </h2>
-                  <p className="text-sm  text-gray-600 max-w-md mx-auto">
-                    Press and hold the microphone button below to start speaking
-                    with your AI training assistant.
+                  <p className="text-sm text-gray-600 max-w-md mx-auto">
+                    Press and hold the microphone button to speak with your English trainer.
                   </p>
                 </div>
               ) : (
@@ -745,13 +928,13 @@ export default function TrainingChat() {
                       <div className="bg-white border border-gray-200 rounded-2xl rounded-bl-md px-4 py-3 max-w-xs shadow-sm">
                         <div className="flex items-center space-x-2">
                           <div className="flex space-x-1">
-                            <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce"></div>
+                            <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce"></div>
                             <div
-                              className="w-2 h-2 bg-purple-400 rounded-full animate-bounce"
+                              className="w-2 h-2 bg-blue-400 rounded-full animate-bounce"
                               style={{ animationDelay: "0.1s" }}
                             ></div>
                             <div
-                              className="w-2 h-2 bg-purple-400 rounded-full animate-bounce"
+                              className="w-2 h-2 bg-blue-400 rounded-full animate-bounce"
                               style={{ animationDelay: "0.2s" }}
                             ></div>
                           </div>
@@ -769,7 +952,6 @@ export default function TrainingChat() {
           </ScrollArea>
         </div>
 
-        {/* Push-to-Talk Control Bar */}
         <div>
           <div className="fixed inset-x-0 bottom-[30px] flex justify-center lg:justify-start lg:pl-[52%]">
             <PushToTalkBar
@@ -777,7 +959,7 @@ export default function TrainingChat() {
               onStartRecording={handleStartRecording}
               onStopRecording={handleStopRecording}
               onBack={handleBackToScenarios}
-              currentMode={currentMode}
+              currentMode={currentMode as "scenario" | "conversation" | "pronunciation" | "grammar"}
               onToggleMode={handleToggleMode}
               showModeIndicator={true}
             />
@@ -785,7 +967,6 @@ export default function TrainingChat() {
         </div>
       </div>
 
-      {/* Auth Modal */}
       <AuthModal
         isOpen={showAuthModal}
         onClose={() => setShowAuthModal(false)}

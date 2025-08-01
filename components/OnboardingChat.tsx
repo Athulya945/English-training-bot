@@ -24,7 +24,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useConversations, type Conversation } from "@/hooks/useConversations";
 import { AuthModal } from "@/components/AuthModal";
 import { useModel } from "@/contexts/ModelContext";
-import ModelSelector from "@/components/ModelSelector";
+//import ModelSelector from "@/components/ModelSelector";
 import { MessageBubble } from "./MessageBubble";
 import { GradientOrb } from "./Gradientorb";
 import { PushToTalkBar } from "./PushToTalkBar";
