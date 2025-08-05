@@ -111,7 +111,7 @@ export function useAnalytics() {
           .toLowerCase()
           .replace(/[^\w\s]/g, '')
           .split(/\s+/)
-          .filter(word => word.length > 2)
+          .filter((word: any) => word.length > 2)
       );
     
     const wordCount = new Map<string, number>();

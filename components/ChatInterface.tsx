@@ -32,6 +32,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useConversations, type Conversation } from "@/hooks/useConversations";
 import { AuthModal } from "@/components/AuthModal";
 import { useModel } from "@/contexts/ModelContext";
+import LanguageSelector, { languageOptions } from "@/components/LanguageSelector";
 //import  ModelSelector  from "@/components/ModelSelector"
 
 export default function ChatInterface() {
@@ -65,6 +66,9 @@ export default function ChatInterface() {
     currentConversationRef.current = currentConversationId;
   }, [currentConversationId]);
 
+  // Get the current language option
+  const currentLanguageOption = languageOptions.find(option => option.id === selectedLanguage);
+
   // Custom chat hook with conversation management
   const {
     messages,
@@ -75,7 +79,7 @@ export default function ChatInterface() {
     error,
     setMessages,
   } = useChat({
-    api: "/api/chat",
+    api: currentLanguageOption?.apiEndpoint || "/api/chat",
     onError: (error) => {
       console.error("Chat error:", error);
     },
@@ -108,6 +112,7 @@ export default function ChatInterface() {
 
   const [listening, setListening] = useState(false);
   const [recognition, setRecognition] = useState<any>(null);
+  const [selectedLanguage, setSelectedLanguage] = useState("english");
   const [placeholder, setPlaceholder] = useState(
     "Ask about English..."
   );
@@ -150,7 +155,7 @@ export default function ChatInterface() {
         const recog = new SpeechRecognition();
         recog.continuous = false;
         recog.interimResults = false;
-        recog.lang = "en-US";
+        recog.lang = selectedLanguage === "kannada" ? "kn-IN" : "en-US";
 
         recog.onresult = (event: any) => {
           const transcript = event.results[0][0].transcript;
@@ -159,7 +164,10 @@ export default function ChatInterface() {
 
         recog.onend = () => {
           setListening(false);
-          setPlaceholder("Ask about outlet strategy or pitch...");
+          setPlaceholder(selectedLanguage === "kannada" 
+            ? "ಕನ್ನಡದಲ್ಲಿ ಮಾತನಾಡಿ..." 
+            : "Ask about English..."
+          );
         };
 
         recognitionRef.current = recog;
@@ -214,7 +222,29 @@ export default function ChatInterface() {
     loadConversationMessages();
   }, [currentConversationId, getMessages, setMessages]); // REMOVED isLoading from dependencies
 
-  const suggestionCards = [
+  const suggestionCards = selectedLanguage === "kannada" ? [
+    {
+      title: "ಕನ್ನಡ-ಇಂಗ್ಲಿಷ್ ಸಂಭಾಷಣೆ",
+      subtitle: "Bilingual",
+      description:
+        "ಕನ್ನಡದಲ್ಲಿ ಮಾತನಾಡಿ, ಇಂಗ್ಲಿಷ್ ಕಲಿಯಿರಿ", 
+      icon: GraduationCap,
+    },
+    {
+      title: "ಉಚ್ಚಾರಣೆ ಅಭ್ಯಾಸ",
+      subtitle: "Pronunciation",
+      description:
+        "ಇಂಗ್ಲಿಷ್ ಉಚ್ಚಾರಣೆಯನ್ನು ಸುಧಾರಿಸಿ", 
+      icon: BookOpen,
+    },
+    {
+      title: "ವ್ಯಾಕರಣ ಕಲಿಕೆ",
+      subtitle: "Grammar",
+      description:
+        "ಇಂಗ್ಲಿಷ್ ವ್ಯಾಕರಣವನ್ನು ಕಲಿಯಿರಿ", 
+      icon: HelpCircle,
+    },
+  ] : [
     {
       title: "Interview Preparation",
       subtitle: "Training",
@@ -240,9 +270,12 @@ export default function ChatInterface() {
 
   const handleSuggestionClick = useCallback(
     (suggestion: string) => {
-      memoizedHandleInputChange({ target: { value: suggestion } } as any);
+      const languageSpecificSuggestion = selectedLanguage === "kannada" 
+        ? "ನನ್ನೊಂದಿಗೆ ಕನ್ನಡದಲ್ಲಿ ಮಾತನಾಡಿ ಮತ್ತು ಇಂಗ್ಲಿಷ್ ಕಲಿಯಿರಿ"
+        : suggestion;
+      memoizedHandleInputChange({ target: { value: languageSpecificSuggestion } } as any);
     },
-    [memoizedHandleInputChange]
+    [memoizedHandleInputChange, selectedLanguage]
   );
 
   const toggleMobileMenu = useCallback(() => {
@@ -315,7 +348,7 @@ export default function ChatInterface() {
     } else {
       recognition.start();
       setListening(true);
-      setPlaceholder("Listening...");
+      setPlaceholder(selectedLanguage === "kannada" ? "ಕೇಳುತ್ತಿದ್ದೇನೆ..." : "Listening...");
     }
   }, [recognition, listening]);
 
@@ -428,7 +461,7 @@ export default function ChatInterface() {
             <div className="flex items-center gap-2">
               <Store className="w-4 h-4 lg:w-5 lg:h-5 text-purple-700" />
               <span className="font-semibold text-sm lg:text-base text-gray-800">
-                English Training Bot
+                {selectedLanguage === "kannada" ? "ಕನ್ನಡ-ಇಂಗ್ಲಿಷ್ ತರಬೇತಿ" : "English Training Bot"}
               </span>
             </div>
             <Button
@@ -541,6 +574,11 @@ export default function ChatInterface() {
             {/* <ModelSelector selectedModel={selectedModel} setSelectedModel={setSelectedModel} /> */}
           </div>
           <div className="flex items-center gap-1 flex-shrink-0">
+            <LanguageSelector
+              selectedLanguage={selectedLanguage}
+              onLanguageChange={setSelectedLanguage}
+              className="mr-2"
+            />
             <Button
               variant="ghost"
               size="sm"
@@ -584,10 +622,16 @@ export default function ChatInterface() {
                 </div>
 
                 <h1 className="text-lg lg:text-3xl font-semibold mb-2 text-center leading-tight text-gray-800">
-                  How can I help you with your English today?
+                  {selectedLanguage === "kannada" 
+                    ? "ನಾನು ನಿಮಗೆ ಇಂಗ್ಲಿಷ್ ಕಲಿಸಲು ಹೇಗೆ ಸಹಾಯ ಮಾಡಬಹುದು?"
+                    : "How can I help you with your English today?"
+                  }
                 </h1>
                 <p className="text-gray-600 text-center mb-4 lg:mb-8 max-w-2xl text-sm lg:text-base leading-relaxed">
-                  I'm here to train you in English and help you with any queries related to English.
+                  {selectedLanguage === "kannada"
+                    ? "ನಾನು ನಿಮಗೆ ಇಂಗ್ಲಿಷ್ ಕಲಿಸಲು ಮತ್ತು ಇಂಗ್ಲಿಷ್ ಸಂಬಂಧಿತ ಯಾವುದೇ ಪ್ರಶ್ನೆಗಳಿಗೆ ಸಹಾಯ ಮಾಡಲು ಇಲ್ಲಿದ್ದೇನೆ."
+                    : "I'm here to train you in English and help you with any queries related to English."
+                  }
                 </p>
 
                 {/* Suggestion Cards - More compact on mobile */}
@@ -628,11 +672,16 @@ export default function ChatInterface() {
                 {/* Call to Action - Hidden on mobile to save space */}
                 <div className="text-center max-w-2xl hidden lg:block">
                   <p className="text-sm lg:text-base text-gray-700 mb-2 font-medium">
-                    Ready to expand your ice cream distribution?
+                    {selectedLanguage === "kannada"
+                      ? "ಇಂಗ್ಲಿಷ್ ಕಲಿಯಲು ಸಿದ್ಧರಿದ್ದೀರಾ?"
+                      : "Ready to improve your English?"
+                    }
                   </p>
                   <p className="text-xs lg:text-sm text-gray-600">
-                    Ask anything about outlet approach, compare with competitor
-                    offerings, or get guidance on your store visits.
+                    {selectedLanguage === "kannada"
+                      ? "ಕನ್ನಡದಲ್ಲಿ ಮಾತನಾಡಿ, ಇಂಗ್ಲಿಷ್ ಕಲಿಯಿರಿ. ಯಾವುದೇ ಪ್ರಶ್ನೆ ಕೇಳಿ."
+                      : "Ask anything about English learning, pronunciation, grammar, or conversation practice."
+                    }
                   </p>
                 </div>
               </div>

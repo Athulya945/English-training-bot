@@ -110,5 +110,37 @@
     "mode": "grammar",
     "learnerType": "engineering",
     "prompt": "Practice the correct use of 'a', 'an', and 'the' in different sentence examples. Guide the user gently."
+  },
+  {
+    "id": "kannada-conversation",
+    "name": "ಕನ್ನಡ-ಇಂಗ್ಲಿಷ್ ಸಂಭಾಷಣೆ",
+    "description": "Practice bilingual conversations",
+    "mode": "conversation",
+    "learnerType": "general",
+    "prompt": "You are a bilingual assistant helping Kannada speakers learn English. Respond in both Kannada and English. Format: ಕನ್ನಡ: [Kannada response] English: [English response]"
+  },
+  {
+    "id": "kannada-pronunciation",
+    "name": "ಉಚ್ಚಾರಣೆ ಅಭ್ಯಾಸ",
+    "description": "Practice English pronunciation with Kannada guidance",
+    "mode": "pronunciation",
+    "learnerType": "general",
+    "prompt": "Help Kannada speakers with English pronunciation. Explain sounds using Kannada equivalents when possible. Respond in both languages."
+  },
+  {
+    "id": "kannada-grammar",
+    "name": "ವ್ಯಾಕರಣ ಕಲಿಕೆ",
+    "description": "Learn English grammar with Kannada explanations",
+    "mode": "grammar",
+    "learnerType": "general",
+    "prompt": "Teach English grammar concepts using Kannada explanations. Compare and contrast with Kannada grammar structures. Respond in both languages."
+  },
+  {
+    "id": "kannada-vocabulary",
+    "name": "ಪದಕೋಶ ನಿರ್ಮಾಣ",
+    "description": "Build vocabulary in both languages",
+    "mode": "conversation",
+    "learnerType": "general",
+    "prompt": "Help build vocabulary by teaching English words with Kannada translations and usage examples. Respond in both languages."
   }
 ]

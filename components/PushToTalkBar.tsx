@@ -45,6 +45,7 @@ interface PushToTalkBarProps {
   currentMode: TrainingMode;
   onToggleMode: (mode: TrainingMode) => void;
   showModeIndicator?: boolean;
+  selectedLanguage?: string;
 }
 
 // Reusable color class generator with type safety
@@ -68,6 +69,7 @@ export const PushToTalkBar = ({
   currentMode,
   onToggleMode,
   showModeIndicator = true,
+  selectedLanguage = "english",
 }: PushToTalkBarProps) => {
   const getNextMode = (): TrainingMode => {
     const currentIndex = modes.indexOf(currentMode);
@@ -76,6 +78,11 @@ export const PushToTalkBar = ({
 
   const handleModeToggle = () => {
     onToggleMode(getNextMode());
+  };
+
+  // Localization helper
+  const getText = (englishText: string, kannadaText: string) => {
+    return selectedLanguage === "kannada" ? kannadaText : englishText;
   };
 
   const handleMicClick = () => {
@@ -95,7 +102,7 @@ export const PushToTalkBar = ({
           size="sm"
           onClick={onBack}
           className="p-3 rounded-full hover:bg-gray-100 text-gray-600 hover:text-gray-800 transition-colors"
-          aria-label="Back to scenarios"
+          aria-label={getText("Back to scenarios", "ಸನ್ನಿವೇಶಗಳಿಗೆ ಹಿಂತಿರುಗಿ")}
           data-testid="back-button"
         >
           <ArrowLeft className="w-5 h-5" />
@@ -108,7 +115,7 @@ export const PushToTalkBar = ({
             "w-16 h-16 rounded-full transition-all duration-200 flex items-center justify-center shadow-lg relative",
             getModeClasses(currentMode, isRecording)
           )}
-          aria-label={isRecording ? "Stop recording" : "Start recording"}
+          aria-label={isRecording ? getText("Stop recording", "ಧ್ವನಿಮುದ್ರಣ ನಿಲ್ಲಿಸಿ") : getText("Start recording", "ಧ್ವನಿಮುದ್ರಣ ಪ್ರಾರಂಭಿಸಿ")}
           data-testid="mic-button"
         >
           <Mic className="w-6 h-6 text-white" />
@@ -125,7 +132,7 @@ export const PushToTalkBar = ({
           size="sm"
           onClick={handleModeToggle}
           className="p-3 rounded-full hover:bg-gray-100 text-gray-600 hover:text-gray-800 flex items-center gap-2 transition-colors"
-          aria-label="Change training mode"
+          aria-label={getText("Change training mode", "ತರಬೇತಿ ವಿಧಾನ ಬದಲಾಯಿಸಿ")}
           data-testid="mode-toggle-button"
         >
           {modeConfig[currentMode]?.icon || <RotateCcw className="w-4 h-4" />}
@@ -137,7 +144,16 @@ export const PushToTalkBar = ({
         <div className="mt-3 text-center">
           <span className="text-xs font-medium text-gray-600 bg-white/90 backdrop-blur-sm rounded-full px-3 py-1.5 shadow-sm flex items-center gap-1">
             {modeConfig[currentMode]?.icon}
-            {modeConfig[currentMode]?.label || currentMode} Mode
+            {(() => {
+              const englishLabel = modeConfig[currentMode]?.label || currentMode;
+              const kannadaLabel = 
+                currentMode === "conversation" ? "ಸಂಭಾಷಣೆ" :
+                currentMode === "pronunciation" ? "ಉಚ್ಚಾರಣೆ" :
+                currentMode === "grammar" ? "ವ್ಯಾಕರಣ" :
+                currentMode === "scenario" ? "ಸನ್ನಿವೇಶಗಳು" :
+                englishLabel;
+              return getText(englishLabel, kannadaLabel);
+            })()} {getText("Mode", "ವಿಧಾನ")}
           </span>
         </div>
       )}

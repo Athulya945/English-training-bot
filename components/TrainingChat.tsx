@@ -33,6 +33,7 @@ import clsx from "clsx";
 import { useAuth } from "@/contexts/AuthContext";
 import { useConversations, type Conversation } from "@/hooks/useConversations";
 import { AuthModal } from "@/components/AuthModal";
+import LanguageSelector, { languageOptions } from "./LanguageSelector";
 
 import { MessageBubble } from "./MessageBubble";
 import { GradientOrb } from "./Gradientorb";
@@ -56,6 +57,7 @@ interface SpeechRecognitionResultList {
 interface SpeechRecognitionResult {
   [index: number]: SpeechRecognitionAlternative;
   length: number;
+  isFinal: boolean;
 }
 
 interface SpeechRecognitionAlternative {
@@ -112,16 +114,6 @@ export default function TrainingChat() {
     window.SpeechRecognition || window.webkitSpeechRecognition;
   const recognitionRef = useRef<SpeechRecognition | null>(null);
 
-  useEffect(() => {
-    if (SpeechRecognition) {
-      const recognition = new SpeechRecognition();
-      recognition.continuous = false;
-      recognition.lang = "en-IN";
-      recognition.interimResults = false;
-      recognitionRef.current = recognition;
-    }
-  }, []);
-
   const [currentConversationId, setCurrentConversationId] = useState(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -132,12 +124,27 @@ export default function TrainingChat() {
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isProcessingMessage, setIsProcessingMessage] = useState(false);
   const [learnerType, setLearnerType] = useState("engineering");
+  const [selectedLanguage, setSelectedLanguage] = useState("english");
+
+  // Speech Recognition setup with language dependency
+  useEffect(() => {
+    if (SpeechRecognition) {
+      const recognition = new SpeechRecognition();
+      recognition.continuous = false; // Stop after each recognition
+      recognition.lang = selectedLanguage === "kannada" ? "kn-IN" : "en-IN";
+      recognition.interimResults = false; // Only final results
+      recognitionRef.current = recognition;
+      console.log("Speech recognition language set to:", recognition.lang);
+    }
+  }, [selectedLanguage]);
 
   const loadedConversationRef = useRef(null);
   const currentConversationRef = useRef(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const lastProcessedMessageRef = useRef<string>("");
 
   useEffect(() => {
     currentConversationRef.current = currentConversationId;
@@ -203,9 +210,17 @@ export default function TrainingChat() {
 
   const sendMessageToAPI = useCallback(
     async (text: string) => {
-      try {
-        addMessage("user", text);
-        setIsLoading(true);
+      // Prevent duplicate message processing
+      if (isLoading) {
+        console.log("Message already being processed, skipping duplicate");
+        return;
+      }
+      
+      // Update the last processed message reference
+      lastProcessedMessageRef.current = text;
+      
+              try {
+          setIsLoading(true);
 
         const messages = [
           ...chatMessages.map((msg) => ({
@@ -215,7 +230,12 @@ export default function TrainingChat() {
           { role: "user", content: text },
         ];
 
-        const response = await fetch("/api/voicechat", {
+        // Add user message to UI after creating the messages array
+        addMessage("user", text);
+
+        const currentLanguageOption = languageOptions.find((option: any) => option.id === selectedLanguage);
+        
+        const response = await fetch(currentLanguageOption?.voiceApiEndpoint || "/api/voicechat", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -228,7 +248,8 @@ export default function TrainingChat() {
               proficiency: "intermediate",
               goals: "improve English skills",
               accentPreference: "en-US"
-            }
+            },
+            userLanguage: selectedLanguage
           }),
         });
 
@@ -352,24 +373,29 @@ export default function TrainingChat() {
   }, [currentMode]);
  
 
+  // Localization helper
+  const getText = (englishText: string, kannadaText: string) => {
+    return selectedLanguage === "kannada" ? kannadaText : englishText;
+  };
+
   const sidebarTabs = [
-    { id: "scenarios", label: "Scenarios", icon: FileText },
-    { id: "dashboard", label: "Progress", icon: BarChart3 },
-    //{ id: "chat-history", label: "History", icon: MessageSquare },
+    { id: "scenarios", label: getText("Scenarios", "ಸನ್ನಿವೇಶಗಳು"), icon: FileText },
+    { id: "dashboard", label: getText("Progress", "ಪ್ರಗತಿ"), icon: BarChart3 },
+    //{ id: "chat-history", label: getText("History", "ಇತಿಹಾಸ"), icon: MessageSquare },
   ];
 
   const learnerTypes = [
-    { id: "engineering", label: "Engineering", icon: UserCog },
-    { id: "iti", label: "ITI/Diploma", icon: GraduationCap },
-    { id: "professional", label: "Professional", icon: Briefcase },
-    { id: "business", label: "Business", icon: TrendingUp },
+    { id: "engineering", label: getText("Engineering", "ಎಂಜಿನಿಯರಿಂಗ್"), icon: UserCog },
+    { id: "iti", label: getText("ITI/Diploma", "ಐಟಿಐ/ಡಿಪ್ಲೋಮಾ"), icon: GraduationCap },
+    { id: "professional", label: getText("Professional", "ವೃತ್ತಿಪರ"), icon: Briefcase },
+    { id: "business", label: getText("Business", "ವ್ಯಾಪಾರ"), icon: TrendingUp },
   ];
 
   const trainingModes = [
-    { id: "conversation", label: "Conversation", icon: MessageSquare },
-    { id: "pronunciation", label: "Pronunciation", icon: Mic },
-    { id: "grammar", label: "Grammar", icon: Languages },
-    { id: "scenario", label: "Scenarios", icon: FileText },
+    { id: "conversation", label: getText("Conversation", "ಸಂಭಾಷಣೆ"), icon: MessageSquare },
+    { id: "pronunciation", label: getText("Pronunciation", "ಉಚ್ಚಾರಣೆ"), icon: Mic },
+    { id: "grammar", label: getText("Grammar", "ವ್ಯಾಕರಣ"), icon: Languages },
+    { id: "scenario", label: getText("Scenarios", "ಸನ್ನಿವೇಶಗಳು"), icon: FileText },
   ];
 
   return (
@@ -408,7 +434,7 @@ export default function TrainingChat() {
                 <Languages className="w-4 h-4 text-white" />
               </div>
               <span className="font-semibold text-base text-gray-800">
-                English Trainer
+                {selectedLanguage === "kannada" ? "ಕನ್ನಡ-ಇಂಗ್ಲಿಷ್ ತರಬೇತಿ" : "English Trainer"}
               </span>
             </div>
             <Button
@@ -454,7 +480,7 @@ export default function TrainingChat() {
           {activeTab === "scenarios" && (
             <div className="space-y-4">
               <h3 className="font-semibold text-gray-800 mb-2 text-lg">
-                Learner Profile
+                {getText("Learner Profile", "ಶಿಕ್ಷಣಾರ್ಥಿ ಪ್ರೊಫೈಲ್")}
               </h3>
               <div className="grid grid-cols-2 gap-2 mb-4">
                 {learnerTypes.map((type) => (
@@ -476,7 +502,7 @@ export default function TrainingChat() {
               </div>
 
               <h3 className="font-semibold text-gray-800 mb-2 text-lg">
-                Training Mode
+                {getText("Training Mode", "ತರಬೇತಿ ವಿಧಾನ")}
               </h3>
               <div className="grid grid-cols-2 gap-2 mb-6">
                 {trainingModes.map((mode) => (
@@ -498,14 +524,53 @@ export default function TrainingChat() {
               </div>
 
               <h3 className="font-semibold text-gray-800 mb-4 text-lg">
-                {currentMode === "conversation" && "Conversation Topics"}
-                {currentMode === "pronunciation" && "Pronunciation Drills"}
-                {currentMode === "grammar" && "Grammar Exercises"}
-                {currentMode === "scenario" && "Practice Scenarios"}
+                {currentMode === "conversation" && getText("Conversation Topics", "ಸಂಭಾಷಣೆ ವಿಷಯಗಳು")}
+                {currentMode === "pronunciation" && getText("Pronunciation Drills", "ಉಚ್ಚಾರಣೆ ಅಭ್ಯಾಸಗಳು")}
+                {currentMode === "grammar" && getText("Grammar Exercises", "ವ್ಯಾಕರಣ ವ್ಯಾಯಾಮಗಳು")}
+                {currentMode === "scenario" && getText("Practice Scenarios", "ಅಭ್ಯಾಸ ಸನ್ನಿವೇಶಗಳು")}
               </h3>
 
               <div className="space-y-3">
-                {currentMode === "conversation" && (
+                {currentMode === "conversation" && selectedLanguage === "kannada" && (
+                  <>
+                    <Card
+                      onClick={() => handleScenarioClick("kannada-conversation")}
+                      className={`p-4 cursor-pointer transition-all duration-200 border 
+                        ${
+                          activeScenarioId === "kannada-conversation"
+                            ? "bg-gradient-to-r from-gray-100 to-blue-100 border-blue-300 shadow-md"
+                            : "border-gray-200 hover:bg-gradient-to-r hover:from-gray-50 hover:to-blue-50 hover:border-blue-200 hover:shadow-md"
+                        }
+                      `}
+                    >
+                      <h4 className="text-sm font-semibold text-gray-800 mb-1">
+                        ಕನ್ನಡ-ಇಂಗ್ಲಿಷ್ ಸಂಭಾಷಣೆ
+                      </h4>
+                      <p className="text-xs text-gray-600">
+                        {getText("Practice bilingual conversations", "ದ್ವಿಭಾಷಾ ಸಂಭಾಷಣೆಗಳನ್ನು ಅಭ್ಯಾಸ ಮಾಡಿ")}
+                      </p>
+                    </Card>
+                    <Card
+                      onClick={() => handleScenarioClick("kannada-vocabulary")}
+                      className={`p-4 cursor-pointer transition-all duration-200 border 
+                        ${
+                          activeScenarioId === "kannada-vocabulary"
+                            ? "bg-gradient-to-r from-gray-100 to-green-100 border-green-300 shadow-md"
+                            : "border-gray-200 hover:bg-gradient-to-r hover:from-gray-50 hover:to-green-50 hover:border-green-200 hover:shadow-md"
+                        }
+                      `}
+                    >
+                      <h4 className="text-sm font-semibold text-gray-800 mb-1">
+                        ಪದಕೋಶ ನಿರ್ಮಾಣ
+                      </h4>
+                      <p className="text-xs text-gray-600">
+                        {getText("Build vocabulary in both languages", "ಎರಡೂ ಭಾಷೆಗಳಲ್ಲಿ ಪದಕೋಶ ನಿರ್ಮಿಸಿ")}
+                      </p>
+                    </Card>
+                  </>
+                )}
+
+                {currentMode === "conversation" && selectedLanguage === "english" && (
                   <>
                     <Card
                       onClick={() => handleScenarioClick("daily-life")}
@@ -544,7 +609,29 @@ export default function TrainingChat() {
                   </>
                 )}
 
-                {currentMode === "pronunciation" && (
+                {currentMode === "pronunciation" && selectedLanguage === "kannada" && (
+                  <>
+                    <Card
+                      onClick={() => handleScenarioClick("kannada-pronunciation")}
+                      className={`p-4 cursor-pointer transition-all duration-200 border 
+                        ${
+                          activeScenarioId === "kannada-pronunciation"
+                            ? "bg-gradient-to-r from-gray-100 to-purple-100 border-purple-300 shadow-md"
+                            : "border-gray-200 hover:bg-gradient-to-r hover:from-gray-50 hover:to-purple-50 hover:border-purple-200 hover:shadow-md"
+                        }
+                      `}
+                    >
+                      <h4 className="text-sm font-semibold text-gray-800 mb-1">
+                        ಉಚ್ಚಾರಣೆ ಅಭ್ಯಾಸ
+                      </h4>
+                      <p className="text-xs text-gray-600">
+                        Practice English pronunciation with Kannada guidance
+                      </p>
+                    </Card>
+                  </>
+                )}
+
+                {currentMode === "pronunciation" && selectedLanguage === "english" && (
                   <>
                     <Card
                       onClick={() => handleScenarioClick("minimal-pairs")}
@@ -596,10 +683,10 @@ export default function TrainingChat() {
                       `}
                     >
                       <h4 className="text-sm font-semibold text-gray-800 mb-1">
-                        Verb Tenses
+                        {getText("Verb Tenses", "ಕ್ರಿಯಾಪದ ಕಾಲಗಳು")}
                       </h4>
                       <p className="text-xs text-gray-600">
-                        Practice past, present and future forms
+                        {getText("Practice past, present and future forms", "ಭೂತ, ವರ್ತಮಾನ ಮತ್ತು ಭವಿಷ್ಯತ್ ರೂಪಗಳನ್ನು ಅಭ್ಯಾಸ ಮಾಡಿ")}
                       </p>
                     </Card>
                     <Card
@@ -613,10 +700,10 @@ export default function TrainingChat() {
                       `}
                     >
                       <h4 className="text-sm font-semibold text-gray-800 mb-1">
-                        Articles (a/an/the)
+                        {getText("Articles (a/an/the)", "ಆರ್ಟಿಕಲ್ಸ್ (a/an/the)")}
                       </h4>
                       <p className="text-xs text-gray-600">
-                        Master proper article usage
+                        {getText("Master proper article usage", "ಸರಿಯಾದ ಆರ್ಟಿಕಲ್ ಬಳಕೆಯನ್ನು ಕಲಿಯಿರಿ")}
                       </p>
                     </Card>
                   </>
@@ -635,10 +722,10 @@ export default function TrainingChat() {
                       `}
                     >
                       <h4 className="text-sm font-semibold text-gray-800 mb-1">
-                        Technical Interview
+                        {getText("Technical Interview", "ತಾಂತ್ರಿಕ ಸಂದರ್ಶನ")}
                       </h4>
                       <p className="text-xs text-gray-600">
-                        Practice answering technical questions
+                        {getText("Practice answering technical questions", "ತಾಂತ್ರಿಕ ಪ್ರಶ್ನೆಗಳಿಗೆ ಉತ್ತರಿಸುವ ಅಭ್ಯಾಸ")}
                       </p>
                     </Card>
                     <Card
@@ -652,10 +739,10 @@ export default function TrainingChat() {
                       `}
                     >
                       <h4 className="text-sm font-semibold text-gray-800 mb-1">
-                        Project Presentation
+                        {getText("Project Presentation", "ಯೋಜನೆ ಪ್ರಸ್ತುತಿ")}
                       </h4>
                       <p className="text-xs text-gray-600">
-                        Practice explaining technical projects
+                        {getText("Practice explaining technical projects", "ತಾಂತ್ರಿಕ ಯೋಜನೆಗಳನ್ನು ವಿವರಿಸುವ ಅಭ್ಯಾಸ")}
                       </p>
                     </Card>
                   </>
@@ -674,10 +761,10 @@ export default function TrainingChat() {
                       `}
                     >
                       <h4 className="text-sm font-semibold text-gray-800 mb-1">
-                        Workshop Communication
+                        {getText("Workshop Communication", "ಕಾರ್ಯಾಗಾರ ಸಂವಹನ")}
                       </h4>
                       <p className="text-xs text-gray-600">
-                        Practice technical instructions
+                        {getText("Practice technical instructions", "ತಾಂತ್ರಿಕ ಸೂಚನೆಗಳನ್ನು ಅಭ್ಯಾಸ ಮಾಡಿ")}
                       </p>
                     </Card>
                     <Card
@@ -713,10 +800,10 @@ export default function TrainingChat() {
                       `}
                     >
                       <h4 className="text-sm font-semibold text-gray-800 mb-1">
-                        Business Meeting
+                        {getText("Business Meeting", "ವ್ಯಾಪಾರ ಸಭೆ")}
                       </h4>
                       <p className="text-xs text-gray-600">
-                        Practice professional discussions
+                        {getText("Practice professional discussions", "ವೃತ್ತಿಪರ ಚರ್ಚೆಗಳನ್ನು ಅಭ್ಯಾಸ ಮಾಡಿ")}
                       </p>
                     </Card>
                     <Card
@@ -730,10 +817,10 @@ export default function TrainingChat() {
                       `}
                     >
                       <h4 className="text-sm font-semibold text-gray-800 mb-1">
-                        Client Presentation
+                        {getText("Client Presentation", "ಗ್ರಾಹಕ ಪ್ರಸ್ತುತಿ")}
                       </h4>
                       <p className="text-xs text-gray-600">
-                        Practice pitching ideas professionally
+                        {getText("Practice pitching ideas professionally", "ಆಲೋಚನೆಗಳನ್ನು ವೃತ್ತಿಪರವಾಗಿ ಪ್ರಸ್ತುತಪಡಿಸುವ ಅಭ್ಯಾಸ")}
                       </p>
                     </Card>
                   </>
@@ -752,10 +839,10 @@ export default function TrainingChat() {
                       `}
                     >
                       <h4 className="text-sm font-semibold text-gray-800 mb-1">
-                        Business Negotiation
+                        {getText("Business Negotiation", "ವ್ಯಾಪಾರ ಸಂಧಾನ")}
                       </h4>
                       <p className="text-xs text-gray-600">
-                        Practice deal-making conversations
+                        {getText("Practice deal-making conversations", "ಒಪ್ಪಂದ ಮಾಡುವ ಸಂಭಾಷಣೆಗಳನ್ನು ಅಭ್ಯಾಸ ಮಾಡಿ")}
                       </p>
                     </Card>
                     <Card
@@ -769,10 +856,10 @@ export default function TrainingChat() {
                       `}
                     >
                       <h4 className="text-sm font-semibold text-gray-800 mb-1">
-                        Email Writing
+                        {getText("Email Writing", "ಇಮೇಲ್ ಬರವಣಿಗೆ")}
                       </h4>
                       <p className="text-xs text-gray-600">
-                        Practice professional email communication
+                        {getText("Practice professional email communication", "ವೃತ್ತಿಪರ ಇಮೇಲ್ ಸಂವಹನವನ್ನು ಅಭ್ಯಾಸ ಮಾಡಿ")}
                       </p>
                     </Card>
                   </>
@@ -784,13 +871,13 @@ export default function TrainingChat() {
           {activeTab === "dashboard" && (
             <div className="space-y-4">
               <h3 className="font-semibold text-gray-800 mb-4 text-lg">
-                Learning Progress
+                {getText("Learning Progress", "ಕಲಿಕೆ ಪ್ರಗತಿ")}
               </h3>
               <div className="space-y-4">
                 <Card className="p-4 bg-gradient-to-r from-blue-50 to-blue-100 border-blue-200">
                   <div className="flex justify-between items-center">
                     <span className="text-sm font-medium text-gray-700">
-                      Sessions Completed
+                      {getText("Sessions Completed", "ಪೂರ್ಣಗೊಂಡ ಅಧಿವೇಶನಗಳು")}
                     </span>
                     <span className="font-bold text-xl text-blue-600">24</span>
                   </div>
@@ -879,6 +966,11 @@ export default function TrainingChat() {
 
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
+            <LanguageSelector
+              selectedLanguage={selectedLanguage}
+              onLanguageChange={setSelectedLanguage}
+              className="mr-2"
+            />
             <Button
               variant="ghost"
               size="sm"
@@ -905,13 +997,27 @@ export default function TrainingChat() {
               {chatMessages.length === 0 ? (
                 <div className="text-center text-gray-500 py-8">
                   <h2 className="text-xl font-semibold mb-3 text-gray-700">
-                    {currentMode === "conversation" && "Start a conversation"}
-                    {currentMode === "pronunciation" && "Begin pronunciation practice"}
-                    {currentMode === "grammar" && "Try a grammar exercise"}
-                    {currentMode === "scenario" && "Select a scenario to practice"}
+                    {selectedLanguage === "kannada" ? (
+                      <>
+                        {currentMode === "conversation" && "ಸಂಭಾಷಣೆ ಪ್ರಾರಂಭಿಸಿ"}
+                        {currentMode === "pronunciation" && "ಉಚ್ಚಾರಣೆ ಅಭ್ಯಾಸ ಪ್ರಾರಂಭಿಸಿ"}
+                        {currentMode === "grammar" && "ವ್ಯಾಕರಣ ವ್ಯಾಯಾಮ ಪ್ರಯತ್ನಿಸಿ"}
+                        {currentMode === "scenario" && "ಅಭ್ಯಾಸಕ್ಕಾಗಿ ಸನ್ನಿವೇಶವನ್ನು ಆಯ್ಕೆಮಾಡಿ"}
+                      </>
+                    ) : (
+                      <>
+                        {currentMode === "conversation" && "Start a conversation"}
+                        {currentMode === "pronunciation" && "Begin pronunciation practice"}
+                        {currentMode === "grammar" && "Try a grammar exercise"}
+                        {currentMode === "scenario" && "Select a scenario to practice"}
+                      </>
+                    )}
                   </h2>
                   <p className="text-sm text-gray-600 max-w-md mx-auto">
-                    Press and hold the microphone button to speak with your English trainer.
+                    {selectedLanguage === "kannada"
+                      ? "ನಿಮ್ಮ ಇಂಗ್ಲಿಷ್ ತರಬೇತುದಾರರೊಂದಿಗೆ ಮಾತನಾಡಲು ಮೈಕ್ರೋಫೋನ್ ಬಟನ್ ಒತ್ತಿ ಹಿಡಿದಿರಿ."
+                      : "Press and hold the microphone button to speak with your English trainer."
+                    }
                   </p>
                 </div>
               ) : (
@@ -939,7 +1045,7 @@ export default function TrainingChat() {
                             ></div>
                           </div>
                           <span className="text-xs text-gray-500">
-                            Thinking...
+                            {getText("Thinking...", "ಯೋಚಿಸುತ್ತಿದ್ದೇನೆ...")}
                           </span>
                         </div>
                       </div>
@@ -962,6 +1068,7 @@ export default function TrainingChat() {
               currentMode={currentMode as "scenario" | "conversation" | "pronunciation" | "grammar"}
               onToggleMode={handleToggleMode}
               showModeIndicator={true}
+              selectedLanguage={selectedLanguage}
             />
           </div>
         </div>

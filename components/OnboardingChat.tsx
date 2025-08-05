@@ -51,7 +51,7 @@ export default function TrainingChat() {
   // Speech Recognition setup
   const SpeechRecognition =
     window.SpeechRecognition || window.webkitSpeechRecognition;
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const recognitionRef = useRef<any>(null);
 
   // Initialize speech recognition
   useEffect(() => {
@@ -246,7 +246,7 @@ export default function TrainingChat() {
       console.log("Speech recognition started");
     };
 
-    recognition.onresult = (event) => {
+    recognition.onresult = (event: any) => {
       const transcript = event.results[0][0].transcript;
       console.log("Transcribed:", transcript);
 
@@ -254,7 +254,7 @@ export default function TrainingChat() {
       sendMessageToAPI(transcript);
     };
 
-    recognition.onerror = (event) => {
+    recognition.onerror = (event: any) => {
       console.error("Speech recognition error:", event.error);
       setIsRecording(false);
 
@@ -458,10 +458,10 @@ export default function TrainingChat() {
             >
               <Menu className="w-5 h-5" />
             </Button>
-            <ModelSelector
+            {/* <ModelSelector
               selectedModel={selectedModel}
               setSelectedModel={setSelectedModel}
-            />
+            /> */}
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
             <Button
@@ -557,7 +557,7 @@ export default function TrainingChat() {
               onStartRecording={handleStartRecording}
               onStopRecording={handleStopRecording}
               onBack={handleBackToScenarios}
-              currentMode={currentMode}
+              currentMode={currentMode as "conversation" | "scenario" | "pronunciation" | "grammar"}
               onToggleMode={handleToggleMode}
               showModeIndicator={false}
             />
