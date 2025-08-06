@@ -39,6 +39,7 @@ import { MessageBubble } from "./MessageBubble";
 import { GradientOrb } from "./Gradientorb";
 import { PushToTalkBar } from "@/components/PushToTalkBar";
 import Scenarios from "@/utils/Scenarios.json";
+import { FeedbackModal } from "@/components/FeedbackModal";
 
 // Type declarations for SpeechRecognition
 interface SpeechRecognitionEvent extends Event {
@@ -127,6 +128,8 @@ export default function TrainingChat() {
   const [isProcessingMessage, setIsProcessingMessage] = useState(false);
   const [learnerType, setLearnerType] = useState("engineering");
   const [selectedLanguage, setSelectedLanguage] = useState("english");
+  const [lastFeedbackTime, setLastFeedbackTime] = useState<number>(0);
+  const [feedbackUpdateInterval, setFeedbackUpdateInterval] = useState<NodeJS.Timeout | null>(null);
 
   // Speech Recognition setup with language dependency
   useEffect(() => {
@@ -196,6 +199,7 @@ export default function TrainingChat() {
     }
   };
 
+  // Enhanced addMessage function with automatic feedback triggering
   const addMessage = useCallback(
     (role: "user" | "assistant", content: string) => {
       const newMessage: ChatMessage = {
@@ -204,9 +208,62 @@ export default function TrainingChat() {
         content,
       };
       setChatMessages((prev) => [...prev, newMessage]);
+      
+      // Trigger automatic feedback after user messages (with debouncing)
+      if (role === "user") {
+        const now = Date.now();
+        if (now - lastFeedbackTime > 5000) { // Only trigger every 5 seconds
+          setLastFeedbackTime(now);
+          // Clear existing interval
+          if (feedbackUpdateInterval) {
+            clearTimeout(feedbackUpdateInterval);
+          }
+          // Set new interval for feedback update
+          const interval = setTimeout(() => {
+            if (chatMessages.length > 2) { // Only generate feedback if there are enough messages
+              generateAutomaticFeedback();
+            }
+          }, 2000); // Wait 2 seconds after user message
+          setFeedbackUpdateInterval(interval);
+        }
+      }
     },
-    []
+    [chatMessages.length, lastFeedbackTime, feedbackUpdateInterval]
   );
+
+  // Function to generate automatic feedback
+  const generateAutomaticFeedback = async () => {
+    if (chatMessages.length < 2) return;
+    
+    try {
+      const response = await fetch("/api/feedback", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          messages: chatMessages,
+          scenario: scenarioDetails,
+          userProfile: {
+            background: learnerType,
+            proficiency: "intermediate",
+            goals: "improve English skills"
+          },
+          userLanguage: selectedLanguage,
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          console.log("Automatic feedback generated:", data.feedback);
+          // You can store this feedback or use it for real-time updates
+        }
+      }
+    } catch (error) {
+      console.error("Error generating automatic feedback:", error);
+    }
+  };
 
   const sendMessageToAPI = useCallback(
     async (text: string) => {
@@ -380,7 +437,7 @@ export default function TrainingChat() {
 
   const sidebarTabs = [
     { id: "scenarios", label: getText("Scenarios", "ಸನ್ನಿವೇಶಗಳು"), icon: FileText },
-    { id: "dashboard", label: getText("Progress", "ಪ್ರಗತಿ"), icon: BarChart3 },
+    //{ id: "dashboard", label: getText("Progress", "ಪ್ರಗತಿ"), icon: BarChart3 },
     //{ id: "chat-history", label: getText("History", "ಇತಿಹಾಸ"), icon: MessageSquare },
   ];
 
@@ -397,6 +454,15 @@ export default function TrainingChat() {
     { id: "grammar", label: getText("Grammar", "ವ್ಯಾಕರಣ"), icon: Languages },
     { id: "scenario", label: getText("Scenarios", "ಸನ್ನಿವೇಶಗಳು"), icon: FileText },
   ];
+
+  // Cleanup interval on unmount
+  useEffect(() => {
+    return () => {
+      if (feedbackUpdateInterval) {
+        clearTimeout(feedbackUpdateInterval);
+      }
+    };
+  }, [feedbackUpdateInterval]);
 
   return (
     <div className="flex bg-stone-50 text-gray-800 h-screen overflow-hidden">
@@ -966,6 +1032,22 @@ export default function TrainingChat() {
 
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
+            {/* Feedback Button - Only show when there are messages */}
+            {chatMessages.length > 0 && (
+              <FeedbackModal
+                messages={chatMessages}
+                scenario={scenarioDetails}
+                userProfile={{
+                  background: learnerType,
+                  proficiency: "intermediate",
+                  goals: "improve English skills"
+                }}
+                userLanguage={selectedLanguage}
+                onFeedbackGenerated={(feedback) => {
+                  console.log("Feedback generated:", feedback);
+                }}
+              />
+            )}
             <LanguageSelector
               selectedLanguage={selectedLanguage}
               onLanguageChange={setSelectedLanguage}
@@ -993,7 +1075,7 @@ export default function TrainingChat() {
           <GradientOrb isSpeaking={isPlayingAudio} isLoading={isLoading} />
 
           <ScrollArea className="flex-1 px-4 lg:px-6">
-            <div className="max-w-4xl max-h-[200px] overflow-y-auto mx-auto scrollbar-hide">
+            <div className="max-w-6xl min-h-[400px] max-h-[70vh] overflow-y-auto mx-auto scrollbar-hide p-4 lg:p-8 bg-white rounded-xl shadow-md">
               {chatMessages.length === 0 ? (
                 <div className="text-center text-gray-500 py-8">
                   <h2 className="text-xl font-semibold mb-3 text-gray-700">

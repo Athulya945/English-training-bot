@@ -33,6 +33,7 @@ import { useConversations, type Conversation } from "@/hooks/useConversations";
 import { AuthModal } from "@/components/AuthModal";
 import { useModel } from "@/contexts/ModelContext";
 import LanguageSelector, { languageOptions } from "@/components/LanguageSelector";
+//import { FeedbackModal } from "@/components/FeedbackModal";
 //import  ModelSelector  from "@/components/ModelSelector"
 
 export default function ChatInterface() {

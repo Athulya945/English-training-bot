@@ -28,6 +28,7 @@ import { useModel } from "@/contexts/ModelContext";
 import { MessageBubble } from "./MessageBubble";
 import { GradientOrb } from "./Gradientorb";
 import { PushToTalkBar } from "./PushToTalkBar";
+import { FeedbackModal } from "@/components/FeedbackModal";
 
 // Define message type for better type safety
 interface ChatMessage {
@@ -174,7 +175,9 @@ export default function TrainingChat() {
         // Add assistant text to chat
         setIsLoading(false);
 
-        addMessage("assistant", data.text);
+        // Use originalText for display if available, otherwise use text
+        const displayText = data.originalText || data.text;
+        addMessage("assistant", displayText);
 
         // Decode base64 audio
         const base64 = data.audio.split(",")[1] || data.audio; 
@@ -458,12 +461,36 @@ export default function TrainingChat() {
             >
               <Menu className="w-5 h-5" />
             </Button>
-            {/* <ModelSelector
-              selectedModel={selectedModel}
-              setSelectedModel={setSelectedModel}
-            /> */}
+            <div className="flex items-center gap-2">
+              <Bot className="w-6 h-6 text-blue-600" />
+              <h1 className="text-lg font-semibold text-gray-900">
+                Onboarding Chat
+              </h1>
+            </div>
           </div>
+
           <div className="flex items-center gap-2 flex-shrink-0">
+            {/* Feedback Button - Only show when there are messages */}
+            {chatMessages.length > 0 && (
+              <FeedbackModal
+                messages={chatMessages}
+                scenario={{
+                  name: "onboarding",
+                  mode: "conversation",
+                  specialization: "onboarding"
+                }}
+                userProfile={{
+                  background: "new user",
+                  proficiency: "beginner",
+                  goals: "complete onboarding"
+                }}
+                userLanguage="english"
+                onFeedbackGenerated={(feedback) => {
+                  console.log("Onboarding feedback generated:", feedback);
+                }}
+              />
+            )}
+
             <Button
               variant="ghost"
               size="sm"

@@ -1,5 +1,6 @@
 import { google } from "@ai-sdk/google";
 import { streamText } from "ai";
+import { cleanTextForVoice, splitBilingualText } from "../../../utils/textProcessing";
 
 // ⏱ Streaming timeout
 export const maxDuration = 30;
@@ -148,19 +149,30 @@ export async function POST(req: Request) {
 
     const currentScenario = scenario || defaultScenario;
 
-         // Dual voice assistant system for English learning
+         // Enhanced dual voice assistant system for English learning with grammar correction
      const systemPrompt = `You are a dual voice assistant system designed to help Kannada speakers learn English effectively.
 
 IMPORTANT INSTRUCTIONS:
 1. **Language Detection**: Detect the language of the user's message (Kannada or English)
-2. **Response Format**: ALWAYS respond in BOTH languages with clear separation:
+2. **Grammar Correction**: When the user speaks in English, identify any grammar mistakes and provide gentle corrections. Format your response as:
+   - First, acknowledge their message naturally
+   - Then, if there are grammar errors, say "By the way, the correct way to say that would be: [corrected version]"
+   - Keep corrections brief and encouraging
+
+3. **Response Format**: ALWAYS respond in BOTH languages with clear separation:
    - First in Kannada (for comfort and understanding)
    - Then in English (for learning and practice)
-3. **Format**: Use this exact format for every response:
+4. **Format**: Use this exact format for every response:
    ಕನ್ನಡ: [Your response in Kannada - for understanding and comfort]
    English: [Your response in English - for learning and pronunciation practice]
 
-4. **Teaching Approach**:
+5. **Voice Optimization**: 
+   - Remove unnecessary punctuation marks (quotes, asterisks, etc.) from your responses
+   - Use natural speech patterns
+   - Avoid reading punctuation aloud
+   - Keep responses conversational and flowing
+
+6. **Teaching Approach**:
    - Be encouraging and patient
    - Provide gentle corrections when needed
    - Help with pronunciation, grammar, and vocabulary
@@ -169,7 +181,7 @@ IMPORTANT INSTRUCTIONS:
    - Focus on practical, everyday English
    - Speak clearly and naturally in English for pronunciation learning
 
-5. **Voice Response**: 
+7. **Voice Response**: 
    - Keep responses concise (2-3 sentences per language) for better voice synthesis
    - English voice will speak only in English for pronunciation practice
    - Kannada voice will speak in Kannada for understanding
@@ -182,7 +194,7 @@ User Profile:
 
 Current scenario: ${currentScenario?.name || 'english learning'}
 
-Remember: You have two voices - Kannada voice for understanding and English voice for pronunciation learning. The English voice should speak naturally and clearly to help users learn proper English pronunciation.`;
+Remember: You have two voices - Kannada voice for understanding and English voice for pronunciation learning. The English voice should speak naturally and clearly to help users learn proper English pronunciation. Provide gentle grammar corrections when needed.`;
 
     console.log("System prompt:", systemPrompt);
 
@@ -221,23 +233,24 @@ Remember: You have two voices - Kannada voice for understanding and English voic
 
       console.log("Complete LLM response:", fullText);
 
+      // Clean the response for better voice synthesis using utility function
+      let cleanedText = cleanTextForVoice(fullText);
+
       // Better validation of the response
-      if (!fullText || fullText.trim() === '' || fullText.length < 5) {
+      if (!cleanedText || cleanedText.trim() === '' || cleanedText.length < 5) {
         throw new Error("Empty or invalid response from AI model");
       }
+
+      console.log("Cleaned LLM response for voice synthesis:", cleanedText);
 
       console.log("LLM text generated successfully, synthesizing speech...");
 
              // Step 2: Convert text to speech - handle both response formats
        let audioBytes: Uint8Array;
        
-       if (fullText.includes("ಕನ್ನಡ:") && fullText.includes("English:")) {
+       if (cleanedText.includes("ಕನ್ನಡ:") && cleanedText.includes("English:")) {
          // Bilingual response format (when user speaks English)
-         const kannadaMatch = fullText.match(/ಕನ್ನಡ:\s*(.*?)(?=\s*English:|$)/);
-         const englishMatch = fullText.match(/English:\s*(.*?)$/);
-         
-         const kannadaText = kannadaMatch ? kannadaMatch[1].trim() : "";
-         const englishText = englishMatch ? englishMatch[1].trim() : "";
+         const { kannada: kannadaText, english: englishText } = splitBilingualText(cleanedText);
          
          console.log("Bilingual response detected");
          console.log("Kannada text:", kannadaText);
@@ -268,14 +281,14 @@ Remember: You have two voices - Kannada voice for understanding and English voic
          } else {
            // Only English text available
            console.log("Synthesizing English only with en-US-Standard-A voice for pronunciation learning...");
-           audioBytes = await synthesizeSpeech(englishText || fullText, "en-US-clear");
+           audioBytes = await synthesizeSpeech(englishText || cleanedText, "en-US-clear");
          }
        } else {
          // Pure Kannada response (when user speaks Kannada)
          console.log("Pure Kannada response detected");
-         console.log("Kannada text:", fullText);
+         console.log("Kannada text:", cleanedText);
          console.log("Synthesizing Kannada with kn-IN-Standard-A voice...");
-         audioBytes = await synthesizeSpeech(fullText, "kn-IN");
+         audioBytes = await synthesizeSpeech(cleanedText, "kn-IN");
        }
 
       const audioBase64 = Buffer.from(audioBytes).toString("base64");
@@ -285,12 +298,13 @@ Remember: You have two voices - Kannada voice for understanding and English voic
       // Step 3: Return both text and base64-encoded audio
       return new Response(
         JSON.stringify({
-          text: fullText,
+          text: cleanedText, // Use cleaned text for voice
+          originalText: fullText, // Keep original for display
           audio: audioBase64,
           scenarioTips: getScenarioTips(currentScenario),
           debug: {
             modelUsed: GEMINI_MODEL,
-            textLength: fullText.length,
+            textLength: cleanedText.length,
             audioLength: audioBase64.length,
             userLanguage: userLanguage
           }

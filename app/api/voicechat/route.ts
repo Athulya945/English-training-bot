@@ -1,5 +1,6 @@
 import { google } from "@ai-sdk/google";
 import { streamText } from "ai";
+import { cleanTextForVoice } from "../../../utils/textProcessing";
 
 // ⏱ Streaming timeout
 export const maxDuration = 30;
@@ -133,8 +134,26 @@ export async function POST(req: Request) {
 
     const currentScenario = scenario || defaultScenario;
 
-    // Simplified system prompt to avoid overwhelming the model
+    // Enhanced system prompt with grammar correction
     const systemPrompt = `You are a helpful English language tutor. Respond naturally and conversationally to help the user practice English. Keep your responses concise (1-3 sentences) and encouraging.
+
+IMPORTANT INSTRUCTIONS:
+1. **Grammar Correction**: When the user speaks in English, identify any grammar mistakes and provide gentle corrections. Format your response as:
+   - First, acknowledge their message naturally
+   - Then, if there are grammar errors, say "By the way, the correct way to say that would be: [corrected version]"
+   - Keep corrections brief and encouraging
+
+2. **Voice Optimization**: 
+   - Remove unnecessary punctuation marks (quotes, asterisks, etc.) from your responses
+   - Use natural speech patterns
+   - Avoid reading punctuation aloud
+   - Keep responses conversational and flowing
+
+3. **Teaching Approach**:
+   - Be supportive and encouraging
+   - Provide gentle corrections when needed
+   - Ask follow-up questions to keep the conversation flowing
+   - Focus on practical, everyday English
 
 User Profile:
 - Background: ${userProfile?.background || 'general learner'}
@@ -143,7 +162,7 @@ User Profile:
 
 Current scenario: ${currentScenario?.name || 'general conversation'}
 
-Be supportive, provide gentle corrections when needed, and ask follow-up questions to keep the conversation flowing.`;
+Remember: Speak naturally as if in a real conversation, not reading from a script.`;
 
     console.log("System prompt:", systemPrompt);
 
@@ -182,16 +201,21 @@ Be supportive, provide gentle corrections when needed, and ask follow-up questio
 
       console.log("Complete LLM response:", fullText);
 
+      // Clean the response for better voice synthesis using utility function
+      let cleanedText = cleanTextForVoice(fullText);
+
       // Better validation of the response
-      if (!fullText || fullText.trim() === '' || fullText.length < 5) {
+      if (!cleanedText || cleanedText.trim() === '' || cleanedText.length < 5) {
         throw new Error("Empty or invalid response from AI model");
       }
+
+      console.log("Cleaned LLM response for voice synthesis:", cleanedText);
 
       console.log("LLM text generated successfully, synthesizing speech...");
 
       // Step 2: Convert text to speech with accent preference
       const accent = userProfile?.accentPreference || 'en-GB';
-      const audioBytes = await synthesizeSpeech(fullText, accent);
+      const audioBytes = await synthesizeSpeech(cleanedText, accent);
       const audioBase64 = Buffer.from(audioBytes).toString("base64");
 
       console.log("Audio synthesized successfully");
@@ -199,12 +223,13 @@ Be supportive, provide gentle corrections when needed, and ask follow-up questio
       // Step 3: Return both text and base64-encoded audio
       return new Response(
         JSON.stringify({
-          text: fullText,
+          text: cleanedText, // Use cleaned text for voice
+          originalText: fullText, // Keep original for display
           audio: audioBase64,
           scenarioTips: getScenarioTips(currentScenario),
           debug: {
             modelUsed: GEMINI_MODEL,
-            textLength: fullText.length,
+            textLength: cleanedText.length,
             audioLength: audioBase64.length
           }
         }),

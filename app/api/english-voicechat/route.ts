@@ -1,5 +1,6 @@
 import { google } from "@ai-sdk/google";
 import { streamText } from "ai";
+import { cleanTextForVoice } from "../../../utils/textProcessing";
 
 // ⏱ Streaming timeout
 export const maxDuration = 30;
@@ -134,18 +135,29 @@ export async function POST(req: Request) {
 
     const currentScenario = scenario || defaultScenario;
 
-    // English pronunciation learning assistant
+    // Enhanced English pronunciation learning assistant with grammar correction
     const systemPrompt = `You are an English pronunciation learning assistant designed to help learners improve their English speaking skills.
 
 IMPORTANT INSTRUCTIONS:
 1. **Language Detection**: Detect the language of the user's message (Kannada or English)
-2. **Response Format**: ALWAYS respond in ENGLISH ONLY for pronunciation practice:
+2. **Grammar Correction**: When the user speaks in English, identify any grammar mistakes and provide gentle corrections. Format your response as:
+   - First, acknowledge their message naturally
+   - Then, if there are grammar errors, say "By the way, the correct way to say that would be: [corrected version]"
+   - Keep corrections brief and encouraging
+
+3. **Response Format**: ALWAYS respond in ENGLISH ONLY for pronunciation practice:
    - Speak clearly and naturally
    - Use proper pronunciation and intonation
    - Keep responses concise (2-3 sentences) for better learning
    - Focus on common words and phrases
 
-3. **Teaching Approach**:
+4. **Voice Optimization**: 
+   - Remove unnecessary punctuation marks (quotes, asterisks, etc.) from your responses
+   - Use natural speech patterns
+   - Avoid reading punctuation aloud
+   - Keep responses conversational and flowing
+
+5. **Teaching Approach**:
    - Be encouraging and patient
    - Provide gentle corrections when needed
    - Help with pronunciation, grammar, and vocabulary
@@ -153,7 +165,7 @@ IMPORTANT INSTRUCTIONS:
    - Focus on practical, everyday English
    - Speak at a moderate pace for learning
 
-4. **Pronunciation Focus**:
+6. **Pronunciation Focus**:
    - Emphasize difficult sounds (th, v, r, etc.)
    - Use natural intonation patterns
    - Provide clear examples
@@ -165,7 +177,7 @@ User Profile:
 - Goals: ${userProfile?.goals || 'improve English pronunciation'}
 - Current scenario: ${currentScenario?.name || 'pronunciation practice'}
 
-Remember: You are speaking in clear, natural English to help users learn proper pronunciation. Speak slowly and clearly for learning purposes.`;
+Remember: You are speaking in clear, natural English to help users learn proper pronunciation. Speak slowly and clearly for learning purposes, and provide gentle grammar corrections when needed.`;
 
     console.log("System prompt:", systemPrompt);
 
@@ -204,16 +216,21 @@ Remember: You are speaking in clear, natural English to help users learn proper 
 
       console.log("Complete LLM response:", fullText);
 
+      // Clean the response for better voice synthesis using utility function
+      let cleanedText = cleanTextForVoice(fullText);
+
       // Better validation of the response
-      if (!fullText || fullText.trim() === '' || fullText.length < 5) {
+      if (!cleanedText || cleanedText.trim() === '' || cleanedText.length < 5) {
         throw new Error("Empty or invalid response from AI model");
       }
+
+      console.log("Cleaned LLM response for voice synthesis:", cleanedText);
 
       console.log("LLM text generated successfully, synthesizing speech...");
 
       // Step 2: Convert text to speech with clear American accent
       console.log("Synthesizing English with en-US-Standard-A voice for pronunciation learning...");
-      const audioBytes = await synthesizeSpeech(fullText);
+      const audioBytes = await synthesizeSpeech(cleanedText);
       console.log("English audio length:", audioBytes.length);
 
       const audioBase64 = Buffer.from(audioBytes).toString("base64");
@@ -223,12 +240,13 @@ Remember: You are speaking in clear, natural English to help users learn proper 
       // Step 3: Return both text and base64-encoded audio
       return new Response(
         JSON.stringify({
-          text: fullText,
+          text: cleanedText, // Use cleaned text for voice
+          originalText: fullText, // Keep original for display
           audio: audioBase64,
           scenarioTips: getScenarioTips(currentScenario),
           debug: {
             modelUsed: GEMINI_MODEL,
-            textLength: fullText.length,
+            textLength: cleanedText.length,
             audioLength: audioBase64.length,
             voiceUsed: "en-US-Standard-A"
           }
