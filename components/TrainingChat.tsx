@@ -39,7 +39,6 @@ import { GradientOrb } from "./Gradientorb";
 import { PushToTalkBar } from "@/components/PushToTalkBar";
 import Scenarios from "@/utils/Scenarios.json";
 import { FeedbackModal } from "@/components/FeedbackModal";
-import { FeedbackButton } from "@/components/FeedbackButton";
 
 // Type declarations for SpeechRecognition
 interface SpeechRecognitionEvent extends Event {
@@ -225,34 +224,50 @@ export default function TrainingChat() {
     const isKannada = language === 'kannada';
     
     const welcomeMessages: Record<string, { english: string; kannada: string }> = {
-      "tech-interview": {
-        english: "Hello! I'm the hiring manager for this technical interview. Please have a seat and tell me a bit about yourself.",
-        kannada: "Hello! I'm the hiring manager for this technical interview. (ನಾನು ತಾಂತ್ರಿಕ ಸಂದರ್ಶನದ ನೇಮಕಾತಿ ವ್ಯವಸ್ಥಾಪಕ)"
-      },
-      "project-presentation": {
-        english: "Good morning! I'm excited to hear about your project. Please go ahead and start your presentation.",
-        kannada: "Good morning! ನಿಮ್ಮ ಯೋಜನೆಯ ಬಗ್ಗೆ ಕೇಳಲು ಉತ್ಸುಕನಾಗಿದ್ದೇನೆ. Please start your presentation."
-      },
-      "workshop": {
-        english: "Welcome to the workshop! Safety first - make sure you have your protective equipment. What are we working on today?",
-        kannada: "Welcome to the workshop! ಮೊದಲು ಸುರಕ್ಷತೆ - make sure you have your protective equipment."
-      },
-      "meeting": {
-        english: "Good morning everyone! Let's start today's meeting. I have the agenda here - shall we begin?",
-        kannada: "Good morning everyone! ಇಂದಿನ ಸಭೆಯನ್ನು ಪ್ರಾರಂಭಿಸೋಣ. Let's start today's meeting."
-      },
-      "kannada-conversation": {
-        english: "ನಮಸ್ಕಾರ! I'm here to help you practice English conversation. ಇಂಗ್ಲಿಷ್ನಲ್ಲಿ ಮಾತನಾಡಲು ಪ್ರಯತ್ನಿಸಿ!",
-        kannada: "ನಮಸ್ಕಾರ! ನಾನು ನಿಮಗೆ ಇಂಗ್ಲಿಷ್ ಸಂಭಾಷಣೆಯನ್ನು ಅಭ್ಯಾಸ ಮಾಡಲು ಸಹಾಯ ಮಾಡುತ್ತೇನೆ."
-      },
-      "daily-life": {
-        english: "Hi there! I'm your neighbor. I was just heading out and thought I'd say hello. How's your day going?",
-        kannada: "Hi there! ನಾನು ನಿಮ್ಮ ನೆರೆಹೊರೆಯವನು. How's your day going?"
-      },
-      "tenses": {
-        english: "Let's work on verb tenses today! We'll practice past, present, and future. Tell me something you did yesterday.",
-        kannada: "ಇಂದು ಕ್ರಿಯಾಪದ ಕಾಲಗಳ ಮೇಲೆ ಕೆಲಸ ಮಾಡೋಣ! Tell me something you did yesterday."
-      }
+        "tech-interview": {
+          english: "Hello! I'm the hiring manager for this technical interview. Please have a seat and tell me a bit about yourself.",
+          kannada: "ನಮಸ್ಕಾರ! ನಾನು ಈ ತಾಂತ್ರಿಕ ಸಂದರ್ಶನದ ನೇಮಕಾತಿ ವ್ಯವಸ್ಥಾಪಕ. (Hello! I'm the hiring manager for this technical interview.) ದಯವಿಟ್ಟು ಕುಳಿತುಕೊಳ್ಳಿ ಮತ್ತು ನಿಮ್ಮ ಬಗ್ಗೆ ಸ್ವಲ್ಪ ಹೇಳಿ. (Please have a seat and tell me a bit about yourself.)"
+        },
+        "project-presentation": {
+          english: "Good morning! I'm excited to hear about your project. Please go ahead and start your presentation.",
+          kannada: "ಶುಭೋದಯ! ನಿಮ್ಮ ಯೋಜನೆಯ ಬಗ್ಗೆ ಕೇಳಲು ನನಗೆ ತುಂಬಾ ಉತ್ಸಾಹವಿದೆ. (Good morning! I'm excited to hear about your project.) ದಯವಿಟ್ಟು ಮುಂದುವರಿಸಿ ಮತ್ತು ನಿಮ್ಮ ಪ್ರೆಸೆಂಟೇಶನ್ ಪ್ರಾರಂಭಿಸಿ. (Please go ahead and start your presentation.)"
+        },
+        "workshop": {
+          english: "Welcome to the technical workshop! Safety first — ensure you have all protective equipment in place. Today, we'll focus on clear and precise technical communication while working on our project. What technical task shall we begin with?",
+          kannada: "ತಾಂತ್ರಿಕ ವರ್ಕ್‌ಶಾಪ್‌ಗೆ ಸ್ವಾಗತ! (Welcome to the technical workshop!) ಮೊದಲು ಸುರಕ್ಷತೆ — ಎಲ್ಲಾ ರಕ್ಷಣಾತ್ಮಕ ಉಪಕರಣಗಳನ್ನು ಧರಿಸಿದ್ದೀರಾ ಎಂದು ಖಚಿತಪಡಿಸಿಕೊಳ್ಳಿ. (Safety first — ensure you have all protective equipment in place.) ಇಂದು, ನಾವು ನಮ್ಮ ಯೋಜನೆಯಲ್ಲಿ ಕೆಲಸ ಮಾಡುವಾಗ ಸ್ಪಷ್ಟ ಮತ್ತು ನಿಖರವಾದ ತಾಂತ್ರಿಕ ಸಂವಹನದ ಮೇಲೆ ಗಮನ ಹರಿಸುತ್ತೇವೆ. (Today, we'll focus on clear and precise technical communication while working on our project.) ಯಾವ ತಾಂತ್ರಿಕ ಕೆಲಸದಿಂದ ಪ್ರಾರಂಭಿಸೋಣ? (What technical task shall we begin with?)"
+        },
+        "meeting": {
+          english: "Good morning everyone! Let's start today's meeting. I have the agenda here - shall we begin?",
+          kannada: "ಎಲ್ಲರಿಗೂ ಶುಭೋದಯ! (Good morning everyone!) ಇಂದಿನ ಸಭೆಯನ್ನು ಪ್ರಾರಂಭಿಸೋಣ. (Let's start today's meeting.) ನನ್ನ ಬಳಿ ಅಜೆಂಡಾ ಇದೆ — ನಾವು ಪ್ರಾರಂಭಿಸಬಹುದೇ? (I have the agenda here — shall we begin?)"
+        },
+        "kannada-conversation": {
+          english: "ನಮಸ್ಕಾರ! I'm here to help you practice English conversation. ಇಂಗ್ಲಿಷ್ನಲ್ಲಿ ಮಾತನಾಡಲು ಪ್ರಯತ್ನಿಸಿ!",
+          kannada: "ನಮಸ್ಕಾರ! (Hello!) ನಾನು ನಿಮಗೆ ಇಂಗ್ಲಿಷ್ ಸಂಭಾಷಣೆಯನ್ನು ಅಭ್ಯಾಸ ಮಾಡಲು ಸಹಾಯ ಮಾಡುತ್ತೇನೆ. (I'm here to help you practice English conversation.) ಇಂಗ್ಲಿಷ್ನಲ್ಲಿ ಮಾತನಾಡಲು ಪ್ರಯತ್ನಿಸಿ! (Try speaking in English!)"
+        },
+        "email": {
+         english: "Hello! Today we'll practice writing a professional email. Please start with a proper greeting and subject line.",
+         kannada: "Hello! ಇಂದು ನಾವು professional email (ವೃತ್ತಿಪರ ಇಮೇಲ್) ಬರೆಯುವ ಅಭ್ಯಾಸ ಮಾಡುತ್ತೇವೆ. ದಯವಿಟ್ಟು ಸರಿಯಾದ greeting (ಸ್ವಾಗತ) ಮತ್ತು subject line (ವಿಷಯ ಶೀರ್ಷಿಕೆ) ನಿಂದ ಪ್ರಾರಂಭಿಸಿ."
+        },
+        "client-presentation": {
+         english: "Hello! Today you will present your ideas to the client. Be confident, maintain eye contact, and highlight the key benefits.",
+         kannada: "Hello! ಇಂದು ನೀವು ನಿಮ್ಮ ideas (ಆಲೋಚನೆಗಳು) ಅನ್ನು client (ಗ್ರಾಹಕ) ಗೆ ಪ್ರಸ್ತುತಪಡಿಸುತ್ತೀರಿ. ಆತ್ಮವಿಶ್ವಾಸದಿಂದಿರಿ, eye contact (ಕಣ್ಣು ಸಂಪರ್ಕ) ಕಾಯ್ದುಕೊಳ್ಳಿ, ಮತ್ತು ಮುಖ್ಯ benefits (ಲಾಭಗಳು) ಅನ್ನು ಒತ್ತಿಹೇಳಿ."
+        },
+        "technical-discussion": {
+         english: "Hello! Today we'll discuss technical aspects of the project. Please share your insights and ask questions.",
+         kannada: "Hello! ಇಂದು ನಾವು ಯೋಜನೆಯ ತಾಂತ್ರಿಕ ಬಗ್ಗೆ ಚರ್ಚಿಸುತ್ತೇವೆ. ದಯವಿಟ್ಟು ನಿಮ್ಮ ಅಭಿಪ್ರಾಯಗಳನ್ನು ಹಂಚಿಕೊಳ್ಳಿ ಮತ್ತು ಪ್ರಶ್ನೆಗಳನ್ನು ಕೇಳಿ."
+        },
+        "business-negotiation": {
+        english: "Good afternoon! This is a business negotiation. Let's discuss terms and try to reach an agreement.",
+        kannada: "Good afternoon! ಇದು business negotiation (ವ್ಯವಹಾರ ಮಾತುಕತೆ). ನಾವಿನ್ನು terms (ನಿಯಮಗಳು) ಚರ್ಚಿಸಿ, ಒಪ್ಪಂದಕ್ಕೆ ಬರಲು ಪ್ರಯತ್ನಿಸೋಣ."
+        },
+        "daily-life":{
+         english: "Hi there! I'm your neighbor. I was just heading out and thought I'd say hello. How's your day going?",
+         kannada: "Hi there! ನಾನು ನಿಮ್ಮ ನೆರೆಹೊರೆಯವನು. How's your day going?"
+        },
+        "tenses": {
+         english: "Let's work on verb tenses today! We'll practice past, present, and future. Tell me something you did yesterday.",
+         kannada: "ಇಂದು ಕ್ರಿಯಾಪದ ಕಾಲಗಳ ಮೇಲೆ ಕೆಲಸ ಮಾಡೋಣ! Tell me something you did yesterday."
+        }
     };
   
     const scenarioId = scenario.id || scenario.name;
