@@ -188,101 +188,6 @@ export default function TrainingChat() {
   const [activeScenarioId, setActiveScenarioId] = useState<string | null>(null);
   const [scenarioDetails, setScenarioDetails] = useState<ScenarioDetails | null>(null);
 
-  const handleScenarioClick = useCallback((scenarioId: string) => {
-    console.log("Scenario clicked:", scenarioId); // Debug log
-    
-    setActiveScenarioId(scenarioId);
-    const found = Scenarios.find((s) => s.id === scenarioId);
-    
-    if (found) {
-      console.log("Found scenario:", found); // Debug log
-      setScenarioDetails({
-        id: found.id,
-        name: found.name,
-        description: found.description,
-        mode: found.mode || currentMode,
-        prompt: found.prompt || ""
-      });
-      
-      // Clear chat messages to start fresh with new scenario
-      setChatMessages([]);
-      
-      // Optional: Add a welcome message specific to the scenario
-      setTimeout(() => {
-        const welcomeMessage = getScenarioWelcomeMessage(found, selectedLanguage);
-        if (welcomeMessage) {
-          addMessage("assistant", welcomeMessage);
-        }
-      }, 500);
-    } else {
-      console.error("Scenario not found:", scenarioId);
-      setScenarioDetails(null);
-    }
-  }, [currentMode, selectedLanguage,]);
-
-  const getScenarioWelcomeMessage = (scenario: any, language: string): string => {
-    const isKannada = language === 'kannada';
-    
-    const welcomeMessages: Record<string, { english: string; kannada: string }> = {
-        "tech-interview": {
-          english: "Hello! I'm the hiring manager for this technical interview. Please have a seat and tell me a bit about yourself.",
-          kannada: "ನಮಸ್ಕಾರ! ನಾನು ಈ ತಾಂತ್ರಿಕ ಸಂದರ್ಶನದ ನೇಮಕಾತಿ ವ್ಯವಸ್ಥಾಪಕ. (Hello! I'm the hiring manager for this technical interview.) ದಯವಿಟ್ಟು ಕುಳಿತುಕೊಳ್ಳಿ ಮತ್ತು ನಿಮ್ಮ ಬಗ್ಗೆ ಸ್ವಲ್ಪ ಹೇಳಿ. (Please have a seat and tell me a bit about yourself.)"
-        },
-        "project-presentation": {
-          english: "Good morning! I'm excited to hear about your project. Please go ahead and start your presentation.",
-          kannada: "ಶುಭೋದಯ! ನಿಮ್ಮ ಯೋಜನೆಯ ಬಗ್ಗೆ ಕೇಳಲು ನನಗೆ ತುಂಬಾ ಉತ್ಸಾಹವಿದೆ. (Good morning! I'm excited to hear about your project.) ದಯವಿಟ್ಟು ಮುಂದುವರಿಸಿ ಮತ್ತು ನಿಮ್ಮ ಪ್ರೆಸೆಂಟೇಶನ್ ಪ್ರಾರಂಭಿಸಿ. (Please go ahead and start your presentation.)"
-        },
-        "workshop": {
-          english: "Welcome to the technical workshop! Safety first — ensure you have all protective equipment in place. Today, we'll focus on clear and precise technical communication while working on our project. What technical task shall we begin with?",
-          kannada: "ತಾಂತ್ರಿಕ ವರ್ಕ್‌ಶಾಪ್‌ಗೆ ಸ್ವಾಗತ! (Welcome to the technical workshop!) ಮೊದಲು ಸುರಕ್ಷತೆ — ಎಲ್ಲಾ ರಕ್ಷಣಾತ್ಮಕ ಉಪಕರಣಗಳನ್ನು ಧರಿಸಿದ್ದೀರಾ ಎಂದು ಖಚಿತಪಡಿಸಿಕೊಳ್ಳಿ. (Safety first — ensure you have all protective equipment in place.) ಇಂದು, ನಾವು ನಮ್ಮ ಯೋಜನೆಯಲ್ಲಿ ಕೆಲಸ ಮಾಡುವಾಗ ಸ್ಪಷ್ಟ ಮತ್ತು ನಿಖರವಾದ ತಾಂತ್ರಿಕ ಸಂವಹನದ ಮೇಲೆ ಗಮನ ಹರಿಸುತ್ತೇವೆ. (Today, we'll focus on clear and precise technical communication while working on our project.) ಯಾವ ತಾಂತ್ರಿಕ ಕೆಲಸದಿಂದ ಪ್ರಾರಂಭಿಸೋಣ? (What technical task shall we begin with?)"
-        },
-        "meeting": {
-          english: "Good morning everyone! Let's start today's meeting. I have the agenda here - shall we begin?",
-          kannada: "ಎಲ್ಲರಿಗೂ ಶುಭೋದಯ! (Good morning everyone!) ಇಂದಿನ ಸಭೆಯನ್ನು ಪ್ರಾರಂಭಿಸೋಣ. (Let's start today's meeting.) ನನ್ನ ಬಳಿ ಅಜೆಂಡಾ ಇದೆ — ನಾವು ಪ್ರಾರಂಭಿಸಬಹುದೇ? (I have the agenda here — shall we begin?)"
-        },
-        "kannada-conversation": {
-          english: "ನಮಸ್ಕಾರ! I'm here to help you practice English conversation. ಇಂಗ್ಲಿಷ್ನಲ್ಲಿ ಮಾತನಾಡಲು ಪ್ರಯತ್ನಿಸಿ!",
-          kannada: "ನಮಸ್ಕಾರ! (Hello!) ನಾನು ನಿಮಗೆ ಇಂಗ್ಲಿಷ್ ಸಂಭಾಷಣೆಯನ್ನು ಅಭ್ಯಾಸ ಮಾಡಲು ಸಹಾಯ ಮಾಡುತ್ತೇನೆ. (I'm here to help you practice English conversation.) ಇಂಗ್ಲಿಷ್ನಲ್ಲಿ ಮಾತನಾಡಲು ಪ್ರಯತ್ನಿಸಿ! (Try speaking in English!)"
-        },
-        "email": {
-         english: "Hello! Today we'll practice writing a professional email. Please start with a proper greeting and subject line.",
-         kannada: "Hello! ಇಂದು ನಾವು professional email (ವೃತ್ತಿಪರ ಇಮೇಲ್) ಬರೆಯುವ ಅಭ್ಯಾಸ ಮಾಡುತ್ತೇವೆ. ದಯವಿಟ್ಟು ಸರಿಯಾದ greeting (ಸ್ವಾಗತ) ಮತ್ತು subject line (ವಿಷಯ ಶೀರ್ಷಿಕೆ) ನಿಂದ ಪ್ರಾರಂಭಿಸಿ."
-        },
-        "client-presentation": {
-         english: "Hello! Today you will present your ideas to the client. Be confident, maintain eye contact, and highlight the key benefits.",
-         kannada: "Hello! ಇಂದು ನೀವು ನಿಮ್ಮ ideas (ಆಲೋಚನೆಗಳು) ಅನ್ನು client (ಗ್ರಾಹಕ) ಗೆ ಪ್ರಸ್ತುತಪಡಿಸುತ್ತೀರಿ. ಆತ್ಮವಿಶ್ವಾಸದಿಂದಿರಿ, eye contact (ಕಣ್ಣು ಸಂಪರ್ಕ) ಕಾಯ್ದುಕೊಳ್ಳಿ, ಮತ್ತು ಮುಖ್ಯ benefits (ಲಾಭಗಳು) ಅನ್ನು ಒತ್ತಿಹೇಳಿ."
-        },
-        "technical-discussion": {
-         english: "Hello! Today we'll discuss technical aspects of the project. Please share your insights and ask questions.",
-         kannada: "Hello! ಇಂದು ನಾವು ಯೋಜನೆಯ ತಾಂತ್ರಿಕ ಬಗ್ಗೆ ಚರ್ಚಿಸುತ್ತೇವೆ. ದಯವಿಟ್ಟು ನಿಮ್ಮ ಅಭಿಪ್ರಾಯಗಳನ್ನು ಹಂಚಿಕೊಳ್ಳಿ ಮತ್ತು ಪ್ರಶ್ನೆಗಳನ್ನು ಕೇಳಿ."
-        },
-        "business-negotiation": {
-        english: "Good afternoon! This is a business negotiation. Let's discuss terms and try to reach an agreement.",
-        kannada: "Good afternoon! ಇದು business negotiation (ವ್ಯವಹಾರ ಮಾತುಕತೆ). ನಾವಿನ್ನು terms (ನಿಯಮಗಳು) ಚರ್ಚಿಸಿ, ಒಪ್ಪಂದಕ್ಕೆ ಬರಲು ಪ್ರಯತ್ನಿಸೋಣ."
-        },
-        "daily-life":{
-         english: "Hi there! I'm your neighbor. I was just heading out and thought I'd say hello. How's your day going?",
-         kannada: "Hi there! ನಾನು ನಿಮ್ಮ ನೆರೆಹೊರೆಯವನು. How's your day going?"
-        },
-        "tenses": {
-         english: "Let's work on verb tenses today! We'll practice past, present, and future. Tell me something you did yesterday.",
-         kannada: "ಇಂದು ಕ್ರಿಯಾಪದ ಕಾಲಗಳ ಮೇಲೆ ಕೆಲಸ ಮಾಡೋಣ! Tell me something you did yesterday."
-        }
-    };
-  
-    const scenarioId = scenario.id || scenario.name;
-    const welcome = welcomeMessages[scenarioId];
-    
-    if (welcome) {
-      return isKannada ? welcome.kannada : welcome.english;
-    }
-    
-    // Default welcome message
-    return isKannada 
-      ? "ನಮಸ್ಕಾರ! ಇಂಗ್ಲಿಷ್ ಅಭ್ಯಾಸ ಪ್ರಾರಂಭಿಸೋಣ!"
-      : "Hello! Let's start practicing English together!";
-  };
-
   const addMessage = useCallback(
     (role: "user" | "assistant", content: string) => {
       const newMessage: ChatMessage = {
@@ -313,11 +218,135 @@ export default function TrainingChat() {
     [chatMessages.length, lastFeedbackTime, feedbackUpdateInterval]
   );
 
-  // Function to generate automatic feedback
+  const handleScenarioClick = useCallback((scenarioId: string) => {
+    console.log("Scenario clicked:", scenarioId); // Debug log
+    
+    setActiveScenarioId(scenarioId);
+    const found = Scenarios.find((s) => s.id === scenarioId);
+    
+    if (found) {
+      console.log("Found scenario:", found); // Debug log
+      setScenarioDetails({
+        id: found.id,
+        name: found.name,
+        description: found.description,
+        mode: found.mode || currentMode,
+        prompt: found.prompt || ""
+      });
+      
+      // Clear chat messages to start fresh with new scenario
+      setChatMessages([]);
+      
+      // Add a welcome message specific to the scenario
+      setTimeout(() => {
+        const welcomeMessage = getScenarioWelcomeMessage(found, selectedLanguage);
+        if (welcomeMessage) {
+          addMessage("assistant", welcomeMessage);
+        }
+      }, 100);
+    } else {
+      console.error("Scenario not found:", scenarioId);
+      setScenarioDetails(null);
+    }
+  }, [currentMode, selectedLanguage, addMessage]);
+
+  const getScenarioWelcomeMessage = (scenario: any, language: string): string => {
+    const isKannada = language === 'kannada';
+    
+    const welcomeMessages: Record<string, { english: string; kannada: string }> = {
+        "tech-interview": {
+          english: "Hello! I'm the hiring manager for this technical interview. Please have a seat and tell me a bit about yourself and your technical background.",
+          kannada: "ನಮಸ್ಕಾರ! ನಾನು ಈ ತಾಂತ್ರಿಕ ಸಂದರ್ಶನದ ನೇಮಕಾತಿ ವ್ಯವಸ್ಥಾಪಕ. (Hello! I'm the hiring manager for this technical interview.) ದಯವಿಟ್ಟು ಕುಳಿತುಕೊಳ್ಳಿ ಮತ್ತು ನಿಮ್ಮ ಬಗ್ಗೆ ಮತ್ತು ತಾಂತ್ರಿಕ ಹಿನ್ನೆಲೆಯ ಬಗ್ಗೆ ಹೇಳಿ. (Please have a seat and tell me about yourself and your technical background.)"
+        },
+        "project-presentation": {
+          english: "Good morning! I'm excited to hear about your project. Please go ahead and start your presentation. I'll be listening and may ask questions about your approach.",
+          kannada: "ಶುಭೋದಯ! ನಿಮ್ಮ ಯೋಜನೆಯ ಬಗ್ಗೆ ಕೇಳಲು ನನಗೆ ತುಂಬಾ ಉತ್ಸಾಹವಿದೆ. (Good morning! I'm excited to hear about your project.) ದಯವಿಟ್ಟು ಮುಂದುವರಿಸಿ ಮತ್ತು ನಿಮ್ಮ ಪ್ರೆಸೆಂಟೇಶನ್ ಪ್ರಾರಂಭಿಸಿ. (Please go ahead and start your presentation.)"
+        },
+        "workshop": {
+          english: "Welcome to the technical workshop! Safety first — ensure you have all protective equipment in place. Today, we'll focus on clear and precise technical communication while working on our project. What technical task shall we begin with?",
+          kannada: "ತಾಂತ್ರಿಕ ವರ್ಕ್‌ಶಾಪ್‌ಗೆ ಸ್ವಾಗತ! (Welcome to the technical workshop!) ಮೊದಲು ಸುರಕ್ಷತೆ — ಎಲ್ಲಾ ರಕ್ಷಣಾತ್ಮಕ ಉಪಕರಣಗಳನ್ನು ಧರಿಸಿದ್ದೀರಾ ಎಂದು ಖಚಿತಪಡಿಸಿಕೊಳ್ಳಿ. (Safety first — ensure you have all protective equipment in place.) ಇಂದು, ನಾವು ನಮ್ಮ ಯೋಜನೆಯಲ್ಲಿ ಕೆಲಸ ಮಾಡುವಾಗ ಸ್ಪಷ್ಟ ಮತ್ತು ನಿಖರವಾದ ತಾಂತ್ರಿಕ ಸಂವಹನದ ಮೇಲೆ ಗಮನ ಹರಿಸುತ್ತೇವೆ. (Today, we'll focus on clear and precise technical communication while working on our project.) ಯಾವ ತಾಂತ್ರಿಕ ಕೆಲಸದಿಂದ ಪ್ರಾರಂಭಿಸೋಣ? (What technical task shall we begin with?)"
+        },
+        "meeting": {
+          english: "Good morning everyone! Let's start today's meeting. I have the agenda here - shall we begin? Please share any updates or concerns you'd like to discuss.",
+          kannada: "ಎಲ್ಲರಿಗೂ ಶುಭೋದಯ! (Good morning everyone!) ಇಂದಿನ ಸಭೆಯನ್ನು ಪ್ರಾರಂಭಿಸೋಣ. (Let's start today's meeting.) ನನ್ನ ಬಳಿ ಅಜೆಂಡಾ ಇದೆ — ನಾವು ಪ್ರಾರಂಭಿಸಬಹುದೇ? (I have the agenda here — shall we begin?)"
+        },
+        "kannada-conversation": {
+          english: "ನಮಸ್ಕಾರ! I'm here to help you practice English conversation. ಇಂಗ್ಲಿಷ್ನಲ್ಲಿ ಮಾತನಾಡಲು ಪ್ರಯತ್ನಿಸಿ! Let's start with a simple greeting.",
+          kannada: "ನಮಸ್ಕಾರ! (Hello!) ನಾನು ನಿಮಗೆ ಇಂಗ್ಲಿಷ್ ಸಂಭಾಷಣೆಯನ್ನು ಅಭ್ಯಾಸ ಮಾಡಲು ಸಹಾಯ ಮಾಡುತ್ತೇನೆ. (I'm here to help you practice English conversation.) ಇಂಗ್ಲಿಷ್ನಲ್ಲಿ ಮಾತನಾಡಲು ಪ್ರಯತ್ನಿಸಿ! (Try speaking in English!)"
+        },
+        "email": {
+         english: "Hello! Today we'll practice writing a professional email. Please start with a proper greeting and subject line. What type of email would you like to write?",
+         kannada: "Hello! ಇಂದು ನಾವು professional email (ವೃತ್ತಿಪರ ಇಮೇಲ್) ಬರೆಯುವ ಅಭ್ಯಾಸ ಮಾಡುತ್ತೇವೆ. ದಯವಿಟ್ಟು ಸರಿಯಾದ greeting (ಸ್ವಾಗತ) ಮತ್ತು subject line (ವಿಷಯ ಶೀರ್ಷಿಕೆ) ನಿಂದ ಪ್ರಾರಂಭಿಸಿ."
+        },
+        "client-presentation": {
+         english: "Hello! Today you will present your ideas to the client. Be confident, maintain eye contact, and highlight the key benefits. What would you like to present?",
+         kannada: "Hello! ಇಂದು ನೀವು ನಿಮ್ಮ ideas (ಆಲೋಚನೆಗಳು) ಅನ್ನು client (ಗ್ರಾಹಕ) ಗೆ ಪ್ರಸ್ತುತಪಡಿಸುತ್ತೀರಿ. ಆತ್ಮವಿಶ್ವಾಸದಿಂದಿರಿ, eye contact (ಕಣ್ಣು ಸಂಪರ್ಕ) ಕಾಯ್ದುಕೊಳ್ಳಿ, ಮತ್ತು ಮುಖ್ಯ benefits (ಲಾಭಗಳು) ಅನ್ನು ಒತ್ತಿಹೇಳಿ."
+        },
+        "technical-discussion": {
+         english: "Hello! Today we'll discuss technical aspects of the project. Please share your insights and ask questions. What technical topic would you like to discuss?",
+         kannada: "Hello! ಇಂದು ನಾವು ಯೋಜನೆಯ ತಾಂತ್ರಿಕ ಬಗ್ಗೆ ಚರ್ಚಿಸುತ್ತೇವೆ. ದಯವಿಟ್ಟು ನಿಮ್ಮ ಅಭಿಪ್ರಾಯಗಳನ್ನು ಹಂಚಿಕೊಳ್ಳಿ ಮತ್ತು ಪ್ರಶ್ನೆಗಳನ್ನು ಕೇಳಿ."
+        },
+        "business-negotiation": {
+        english: "Good afternoon! This is a business negotiation. Let's discuss terms and try to reach an agreement. What would you like to negotiate about?",
+        kannada: "Good afternoon! ಇದು business negotiation (ವ್ಯಾಪಾರ ಮಾತುಕತೆ). ನಾವಿನ್ನು terms (ನಿಯಮಗಳು) ಚರ್ಚಿಸಿ, ಒಪ್ಪಂದಕ್ಕೆ ಬರಲು ಪ್ರಯತ್ನಿಸೋಣ."
+        },
+        "daily-life":{
+         english: "Hi there! I'm your neighbor. I was just heading out and thought I'd say hello. How's your day going? What have you been up to?",
+         kannada: "Hi there! ನಾನು ನಿಮ್ಮ ನೆರೆಹೊರೆಯವನು. How's your day going?"
+        },
+        "tenses": {
+         english: "Let's work on verb tenses today! We'll practice past, present, and future. Tell me something you did yesterday, what you're doing now, and what you'll do tomorrow.",
+         kannada: "ಇಂದು ಕ್ರಿಯಾಪದ ಕಾಲಗಳ ಮೇಲೆ ಕೆಲಸ ಮಾಡೋಣ! Tell me something you did yesterday."
+        },
+        "minimal-pairs": {
+         english: "Great! Let's practice minimal pairs today. These are words that sound very similar but have different meanings. Ready to start?",
+         kannada: "Great! Let's practice minimal pairs today. These are words that sound very similar but have different meanings."
+        },
+        "intonation": {
+         english: "Welcome to intonation practice! Today we'll work on the rhythm and stress patterns of English. Let's start with some simple sentences.",
+         kannada: "Welcome to intonation practice! Today we'll work on the rhythm and stress patterns of English."
+        },
+        "articles": {
+         english: "Let's practice using articles (a, an, the) correctly today! These small words are very important in English. Ready to begin?",
+         kannada: "Let's practice using articles (a, an, the) correctly today! These small words are very important in English."
+        }
+    };
+  
+    const scenarioId = scenario.id || scenario.name;
+    const welcome = welcomeMessages[scenarioId];
+    
+    if (welcome) {
+      return isKannada ? welcome.kannada : welcome.english;
+    }
+    
+    // Default welcome message based on mode
+    if (currentMode === "conversation") {
+      return isKannada 
+        ? "ನಮಸ್ಕಾರ! ಇಂಗ್ಲಿಷ್ ಸಂಭಾಷಣೆ ಪ್ರಾರಂಭಿಸೋಣ! ಹೇಗಿದ್ದೀರಿ?"
+        : "Hello! Let's start practicing English conversation! How are you doing?";
+    } else if (currentMode === "pronunciation") {
+      return isKannada
+        ? "ನಮಸ್ಕಾರ! ಇಂದು ಉಚ್ಚಾರಣೆ ಅಭ್ಯಾಸ ಮಾಡೋಣ! ಯಾವ ಶಬ್ದಗಳನ್ನು ಅಭ್ಯಾಸ ಮಾಡಲು ಬಯಸುತ್ತೀರಿ?"
+        : "Hello! Let's practice pronunciation today! What sounds would you like to work on?";
+    } else if (currentMode === "grammar") {
+      return isKannada
+        ? "ನಮಸ್ಕಾರ! ಇಂದು ವ್ಯಾಕರಣ ಅಭ್ಯಾಸ ಮಾಡೋಣ! ಯಾವ ವ್ಯಾಕರಣ ವಿಷಯವನ್ನು ಕಲಿಯಲು ಬಯಸುತ್ತೀರಿ?"
+        : "Hello! Let's practice grammar today! What grammar topic would you like to learn?";
+    } else {
+      return isKannada 
+        ? "ನಮಸ್ಕಾರ! ಇಂಗ್ಲಿಷ್ ಅಭ್ಯಾಸ ಪ್ರಾರಂಭಿಸೋಣ!"
+        : "Hello! Let's start practicing English together!";
+    }
+  };
+
+  // Function to generate dynamic feedback based on conversation
   const generateAutomaticFeedback = async () => {
     if (chatMessages.length < 2) return;
     
     try {
+      // Determine if we should analyze individual message or full conversation
+      const shouldAnalyzeIndividual = chatMessages.length >= 4; // Analyze individual after 4+ messages
+      
       const response = await fetch("/api/feedback", {
         method: "POST",
         headers: {
@@ -332,18 +361,31 @@ export default function TrainingChat() {
             goals: "improve English skills"
           },
           userLanguage: selectedLanguage,
+          analyzeIndividual: shouldAnalyzeIndividual, // Dynamic analysis type
         }),
       });
 
       if (response.ok) {
         const data = await response.json();
         if (data.success) {
-          console.log("Automatic feedback generated:", data.feedback);
-          // You can store this feedback or use it for real-time updates
+          console.log("Dynamic feedback generated:", data.feedback);
+          
+          // Store feedback for real-time updates
+          // You can use this data to update UI components or store in state
+          if (data.feedback) {
+            // Update any feedback display components
+            console.log("Feedback data:", {
+              overallScore: data.feedback.overallScore,
+              conversationAnalysis: data.feedback.conversationAnalysis,
+              progressAnalysis: data.feedback.progressAnalysis,
+              strengths: data.feedback.strengths,
+              areasForImprovement: data.feedback.areasForImprovement
+            });
+          }
         }
       }
     } catch (error) {
-      console.error("Error generating automatic feedback:", error);
+      console.error("Error generating dynamic feedback:", error);
     }
   };
 
@@ -379,9 +421,17 @@ export default function TrainingChat() {
           id: scenarioDetails.id,
           name: scenarioDetails.name,
           description: scenarioDetails.description,
-          mode: scenarioDetails.mode,
+          mode: scenarioDetails.mode || currentMode,
           prompt: scenarioDetails.prompt
-        } : null;
+        } : {
+          id: currentMode === "conversation" ? "general-conversation" : 
+               currentMode === "pronunciation" ? "pronunciation-practice" :
+               currentMode === "grammar" ? "grammar-practice" : "scenario-practice",
+          name: currentMode,
+          description: `Practice ${currentMode}`,
+          mode: currentMode,
+          prompt: `You are helping the user practice ${currentMode}.`
+        };
   
         console.log("Sending scenario data to API:", scenarioData); // Debug log
         
@@ -399,7 +449,15 @@ export default function TrainingChat() {
   
         console.log("Full request payload:", requestPayload); // Debug log
   
-        const response = await fetch(currentLanguageOption?.voiceApiEndpoint || "/api/voicechat", {
+        // Determine the correct API endpoint based on language and mode
+        let apiEndpoint = "/api/voicechat";
+        if (selectedLanguage === "kannada") {
+          apiEndpoint = "/api/kannada-voicechat";
+        } else if (currentMode === "pronunciation") {
+          apiEndpoint = "/api/english-voicechat";
+        }
+  
+        const response = await fetch(apiEndpoint, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -414,38 +472,43 @@ export default function TrainingChat() {
         const data = await response.json();
         setIsLoading(false);
   
-        addMessage("assistant", data.text);
+        // Use the cleaned text for display and voice
+        const displayText = data.originalText || data.text;
+        addMessage("assistant", displayText);
   
-        // Audio playback logic remains the same...
-        const base64 = data.audio.split(",")[1] || data.audio;
-        const audioBlob = new Blob(
-          [Uint8Array.from(atob(base64), (c) => c.charCodeAt(0))],
-          { type: "audio/mpeg" }
-        );
-        const audioUrl = URL.createObjectURL(audioBlob);
+        // Audio playback logic
+        if (data.audio) {
+          const base64 = data.audio.split(",")[1] || data.audio;
+          const audioBlob = new Blob(
+            [Uint8Array.from(atob(base64), (c) => c.charCodeAt(0))],
+            { type: "audio/mpeg" }
+          );
+          const audioUrl = URL.createObjectURL(audioBlob);
   
-        if (audioRef.current) {
-          audioRef.current.src = audioUrl;
-          setIsPlayingAudio(true);
+          if (audioRef.current) {
+            audioRef.current.src = audioUrl;
+            setIsPlayingAudio(true);
   
-          audioRef.current.onended = () => {
-            setIsPlayingAudio(false);
-            URL.revokeObjectURL(audioUrl);
-          };
+            audioRef.current.onended = () => {
+              setIsPlayingAudio(false);
+              URL.revokeObjectURL(audioUrl);
+            };
   
-          audioRef.current.onerror = () => {
-            setIsPlayingAudio(false);
-            URL.revokeObjectURL(audioUrl);
-            console.error("Audio playback failed");
-          };
+            audioRef.current.onerror = () => {
+              setIsPlayingAudio(false);
+              URL.revokeObjectURL(audioUrl);
+              console.error("Audio playback failed");
+            };
   
-          await audioRef.current.play();
+            await audioRef.current.play();
+          }
         }
   
+        // Save messages to conversation if available
         if (currentConversationId) {
           try {
             await saveMessage(currentConversationId, "user", text);
-            await saveMessage(currentConversationId, "assistant", data.text);
+            await saveMessage(currentConversationId, "assistant", displayText);
             refetchConversations();
           } catch (error) {
             console.error("Failed to save messages:", error);
@@ -470,7 +533,7 @@ export default function TrainingChat() {
         addMessage("assistant", errorMessage);
       }
     },
-    [chatMessages, currentConversationId, addMessage, saveMessage, refetchConversations, scenarioDetails, learnerType, selectedLanguage, isLoading]
+    [chatMessages, currentConversationId, addMessage, saveMessage, refetchConversations, scenarioDetails, learnerType, selectedLanguage, currentMode, isLoading]
   );
   
 
@@ -1173,32 +1236,42 @@ export default function TrainingChat() {
           <GradientOrb isSpeaking={isPlayingAudio} isLoading={isLoading} />
 
           <ScrollArea className="flex-1 px-4 lg:px-6">
-            <div className="max-w-4xl max-h-[200px] overflow-y-auto mx-auto scrollbar-hide">
+            <div className="max-w-6xl min-h-[400px] max-h-[70vh] overflow-y-auto mx-auto scrollbar-hide p-4 lg:p-8 bg-white rounded-xl shadow-md">
               {chatMessages.length === 0 ? (
                 <div className="text-center text-gray-500 py-8">
-                  <h2 className="text-xl font-semibold mb-3 text-gray-700">
-                    {selectedLanguage === "kannada" ? (
-                      <>
-                        {currentMode === "conversation" && "ಸಂಭಾಷಣೆ ಪ್ರಾರಂಭಿಸಿ"}
-                        {currentMode === "pronunciation" && "ಉಚ್ಚಾರಣೆ ಅಭ್ಯಾಸ ಪ್ರಾರಂಭಿಸಿ"}
-                        {currentMode === "grammar" && "ವ್ಯಾಕರಣ ವ್ಯಾಯಾಮ ಪ್ರಯತ್ನಿಸಿ"}
-                        {currentMode === "scenario" && "ಅಭ್ಯಾಸಕ್ಕಾಗಿ ಸನ್ನಿವೇಶವನ್ನು ಆಯ್ಕೆಮಾಡಿ"}
-                      </>
-                    ) : (
-                      <>
-                        {currentMode === "conversation" && "Start a conversation"}
-                        {currentMode === "pronunciation" && "Begin pronunciation practice"}
-                        {currentMode === "grammar" && "Try a grammar exercise"}
-                        {currentMode === "scenario" && "Select a scenario to practice"}
-                      </>
-                    )}
-                  </h2>
-                  <p className="text-sm text-gray-600 max-w-md mx-auto">
-                    {selectedLanguage === "kannada"
-                      ? "ನಿಮ್ಮ ಇಂಗ್ಲಿಷ್ ತರಬೇತುದಾರರೊಂದಿಗೆ ಮಾತನಾಡಲು ಮೈಕ್ರೋಫೋನ್ ಬಟನ್ ಒತ್ತಿ ಹಿಡಿದಿರಿ."
-                      : "Press and hold the microphone button to speak with your English trainer."
-                    }
-                  </p>
+                  <div className="mb-6">
+                    <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
+                      <Bot className="w-8 h-8 text-white" />
+                    </div>
+                    <h2 className="text-xl font-semibold mb-3 text-gray-700">
+                      {selectedLanguage === "kannada" ? (
+                        <>
+                          {currentMode === "conversation" && "ಸಂಭಾಷಣೆ ಪ್ರಾರಂಭಿಸಿ"}
+                          {currentMode === "pronunciation" && "ಉಚ್ಚಾರಣೆ ಅಭ್ಯಾಸ ಪ್ರಾರಂಭಿಸಿ"}
+                          {currentMode === "grammar" && "ವ್ಯಾಕರಣ ವ್ಯಾಯಾಮ ಪ್ರಯತ್ನಿಸಿ"}
+                          {currentMode === "scenario" && "ಅಭ್ಯಾಸಕ್ಕಾಗಿ ಸನ್ನಿವೇಶವನ್ನು ಆಯ್ಕೆಮಾಡಿ"}
+                        </>
+                      ) : (
+                        <>
+                          {currentMode === "conversation" && "Start a conversation"}
+                          {currentMode === "pronunciation" && "Begin pronunciation practice"}
+                          {currentMode === "grammar" && "Try a grammar exercise"}
+                          {currentMode === "scenario" && "Select a scenario to practice"}
+                        </>
+                      )}
+                    </h2>
+                    <p className="text-sm text-gray-600 max-w-md mx-auto mb-4">
+                      {selectedLanguage === "kannada"
+                        ? "ನಿಮ್ಮ ಇಂಗ್ಲಿಷ್ ತರಬೇತುದಾರರೊಂದಿಗೆ ಮಾತನಾಡಲು ಮೈಕ್ರೋಫೋನ್ ಬಟನ್ ಒತ್ತಿ ಹಿಡಿದಿರಿ."
+                        : "Press and hold the microphone button to speak with your English trainer."
+                      }
+                    </p>
+                    <div className="flex justify-center space-x-2">
+                      <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce"></div>
+                      <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: "0.1s" }}></div>
+                      <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: "0.2s" }}></div>
+                    </div>
+                  </div>
                 </div>
               ) : (
                 <div className="space-y-4 pb-4">

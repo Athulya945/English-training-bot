@@ -35,11 +35,24 @@ interface FeedbackData {
   tone?: number;
   clarity?: number;
   empathy?: number;
+  conversationAnalysis?: {
+    engagementLevel: string;
+    responseQuality: string;
+    conversationFlow: string;
+    topicAdaptation?: string;
+  };
+  progressAnalysis?: {
+    improvement: string;
+    consistency: string;
+    learningPatterns?: string;
+    adaptation?: string;
+  };
   strengths: string[];
   areasForImprovement: string[];
   grammarAnalysis: {
     commonErrors: string[];
     grammarScore: number;
+    contextualGrammar?: string;
   };
   vocabularyAnalysis: {
     vocabularyRange: string;
@@ -51,7 +64,8 @@ interface FeedbackData {
     fluencyScore: number;
     fluencyNotes: string;
   };
-  recommendations: string[];
+  conversationRecommendations?: string[];
+  recommendations?: string[];
   nextSteps: string[];
   encouragement: string;
 }
@@ -265,10 +279,12 @@ export function FeedbackModal({
               <Card className="p-6 border-2 border-gray-200 rounded-xl">
                 <div className="flex items-center gap-2 mb-4">
                   <Lightbulb className="w-5 h-5 text-blue-600" />
-                  <h2 className="text-lg font-bold text-blue-700">One suggestion to improve future interactions</h2>
+                  <h2 className="text-lg font-bold text-blue-700">
+                    {(feedback.conversationRecommendations ? 'Conversation' : 'One suggestion to improve future interactions')}
+                  </h2>
                 </div>
                 <ul className="space-y-3">
-                  {feedback.recommendations.map((recommendation, index) => (
+                  {(feedback.conversationRecommendations || feedback.recommendations || []).map((recommendation, index) => (
                     <li key={index} className="flex items-start gap-3">
                       <div className="w-2 h-2 bg-gray-400 rounded-full mt-2 flex-shrink-0"></div>
                       <span className="text-gray-700 text-sm leading-relaxed">{recommendation}</span>
@@ -292,6 +308,84 @@ export function FeedbackModal({
                       </li>
                     ))}
                   </ul>
+                </Card>
+              )}
+
+              {/* Conversation Analysis */}
+              {feedback.conversationAnalysis && (
+                <Card className="p-6 border-2 border-gray-200 rounded-xl">
+                  <div className="flex items-center gap-2 mb-4">
+                    <MessageSquare className="w-5 h-5 text-indigo-600" />
+                    <h2 className="text-lg font-bold text-indigo-700">Conversation Analysis</h2>
+                  </div>
+                  <div className="space-y-3">
+                    <div className="flex items-start gap-3">
+                      <div className="w-2 h-2 bg-indigo-400 rounded-full mt-2 flex-shrink-0"></div>
+                      <span className="text-gray-700 text-sm leading-relaxed">
+                        <strong>Engagement:</strong> {feedback.conversationAnalysis.engagementLevel}
+                      </span>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <div className="w-2 h-2 bg-indigo-400 rounded-full mt-2 flex-shrink-0"></div>
+                      <span className="text-gray-700 text-sm leading-relaxed">
+                        <strong>Response Quality:</strong> {feedback.conversationAnalysis.responseQuality}
+                      </span>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <div className="w-2 h-2 bg-indigo-400 rounded-full mt-2 flex-shrink-0"></div>
+                      <span className="text-gray-700 text-sm leading-relaxed">
+                        <strong>Conversation Flow:</strong> {feedback.conversationAnalysis.conversationFlow}
+                      </span>
+                    </div>
+                    {feedback.conversationAnalysis.topicAdaptation && (
+                      <div className="flex items-start gap-3">
+                        <div className="w-2 h-2 bg-indigo-400 rounded-full mt-2 flex-shrink-0"></div>
+                        <span className="text-gray-700 text-sm leading-relaxed">
+                          <strong>Topic Adaptation:</strong> {feedback.conversationAnalysis.topicAdaptation}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </Card>
+              )}
+
+              {/* Progress Analysis */}
+              {feedback.progressAnalysis && (
+                <Card className="p-6 border-2 border-gray-200 rounded-xl">
+                  <div className="flex items-center gap-2 mb-4">
+                    <TrendingUp className="w-5 h-5 text-green-600" />
+                    <h2 className="text-lg font-bold text-green-700">Progress Analysis</h2>
+                  </div>
+                  <div className="space-y-3">
+                    <div className="flex items-start gap-3">
+                      <div className="w-2 h-2 bg-green-400 rounded-full mt-2 flex-shrink-0"></div>
+                      <span className="text-gray-700 text-sm leading-relaxed">
+                        <strong>Improvement:</strong> {feedback.progressAnalysis.improvement}
+                      </span>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <div className="w-2 h-2 bg-green-400 rounded-full mt-2 flex-shrink-0"></div>
+                      <span className="text-gray-700 text-sm leading-relaxed">
+                        <strong>Consistency:</strong> {feedback.progressAnalysis.consistency}
+                      </span>
+                    </div>
+                    {feedback.progressAnalysis.learningPatterns && (
+                      <div className="flex items-start gap-3">
+                        <div className="w-2 h-2 bg-green-400 rounded-full mt-2 flex-shrink-0"></div>
+                        <span className="text-gray-700 text-sm leading-relaxed">
+                          <strong>Learning Patterns:</strong> {feedback.progressAnalysis.learningPatterns}
+                        </span>
+                      </div>
+                    )}
+                    {feedback.progressAnalysis.adaptation && (
+                      <div className="flex items-start gap-3">
+                        <div className="w-2 h-2 bg-green-400 rounded-full mt-2 flex-shrink-0"></div>
+                        <span className="text-gray-700 text-sm leading-relaxed">
+                          <strong>Adaptation:</strong> {feedback.progressAnalysis.adaptation}
+                        </span>
+                      </div>
+                    )}
+                  </div>
                 </Card>
               )}
 
