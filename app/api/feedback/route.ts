@@ -96,9 +96,19 @@ CURRENT USER MESSAGE TO ANALYZE:
 ANALYSIS REQUIREMENTS:
 1. Consider the conversation flow and context
 2. Analyze grammar accuracy, vocabulary usage, pronunciation patterns, and fluency
-3. Identify specific improvements and strengths
-4. Provide actionable feedback for this specific message
-5. Consider the user's proficiency level and learning goals
+3. Analyze professionalism, tone, clarity, and empathy in their communication
+4. Identify specific improvements and strengths
+5. Provide actionable feedback for this specific message
+6. Consider the user's proficiency level and learning goals
+
+SCORING CRITERIA:
+- Professionalism (1-10): Use of appropriate language, formality level, respect
+- Tone (1-10): Friendliness, appropriateness, emotional intelligence
+- Clarity (1-10): Clear expression of ideas, easy to understand
+- Empathy (1-10): Understanding of others, emotional awareness, considerate responses
+- Grammar (1-10): Grammatical accuracy, sentence structure, syntax
+- Vocabulary (1-10): Word choice, range, appropriateness
+- Fluency (1-10): Natural flow, coherence, ease of expression
 
 FEEDBACK REQUIREMENTS:
 Provide a comprehensive analysis in the following JSON format (use the exact structure):
@@ -152,7 +162,7 @@ ANALYSIS GUIDELINES:
 5. Provide practical suggestions
 6. Acknowledge progress and effort
 7. Be constructive and supportive
-8. Analyze grammar, vocabulary, pronunciation, and fluency for this message
+8. Score professionalism, tone, clarity, and empathy based on the message content
 9. Give specific examples from their message
 10. Provide concrete improvement suggestions
 11. Consider the conversation flow and context
@@ -226,19 +236,24 @@ IMPORTANT: Return ONLY valid JSON. Do not include any additional text or explana
         const hasComplexWords = /(however|therefore|furthermore|nevertheless|consequently)/i.test(userText);
         const hasProperPunctuation = /[.!?]/.test(userText);
         const hasContractions = /(don't|can't|won't|isn't|aren't|wasn't|weren't)/i.test(userText);
+        const hasEmotionalWords = /(feel|think|believe|hope|wish|sorry|happy|sad|excited)/i.test(userText);
         
         // Enhanced scoring based on multiple factors
         const grammarScore = hasGrammarIssues ? 4 : (hasProperPunctuation ? 7 : 6);
         const vocabularyScore = hasComplexWords ? 8 : (wordCount > 5 ? 6 : 5);
         const fluencyScore = hasContractions ? 7 : 6;
-        const overallScore = Math.round((grammarScore + vocabularyScore + fluencyScore) / 3);
+        const professionalismScore = hasPoliteWords ? 8 : (hasBasicGreeting ? 7 : 6);
+        const toneScore = hasPoliteWords ? 8 : (hasBasicGreeting ? 7 : 6);
+        const clarityScore = hasQuestion ? 7 : (hasProperPunctuation ? 7 : 6);
+        const empathyScore = hasEmotionalWords ? 8 : (hasPoliteWords ? 7 : 5);
+        const overallScore = Math.round((grammarScore + vocabularyScore + fluencyScore + professionalismScore + toneScore + clarityScore + empathyScore) / 7);
         
         feedbackData = {
           overallScore: overallScore,
-          professionalism: hasPoliteWords ? 8 : 6,
-          tone: hasPoliteWords ? 8 : 6,
-          clarity: hasQuestion ? 7 : 6,
-          empathy: hasPoliteWords ? 7 : 5,
+          professionalism: professionalismScore,
+          tone: toneScore,
+          clarity: clarityScore,
+          empathy: empathyScore,
           strengths: hasBasicGreeting ? ["Good greeting etiquette", "Clear communication"] : ["Attempted communication"],
           areasForImprovement: hasGrammarIssues ? ["Grammar accuracy", "Sentence structure"] : ["Vocabulary expansion", "Grammar practice"],
           grammarAnalysis: {
@@ -283,15 +298,29 @@ ${userMessages.map((msg, index) => `${index + 1}. "${msg}"`).join('\n')}
 ANALYSIS REQUIREMENTS:
 1. Analyze the entire conversation flow and context
 2. Identify patterns in grammar, vocabulary, and communication style
-3. Consider conversation progression and improvement over time
-4. Provide specific, actionable feedback based on the full conversation
-5. Assess overall English proficiency and communication skills
+3. Analyze professionalism, tone, clarity, and empathy throughout the conversation
+4. Consider conversation progression and improvement over time
+5. Provide specific, actionable feedback based on the full conversation
+6. Assess overall English proficiency and communication skills
+
+SCORING CRITERIA:
+- Professionalism (1-10): Use of appropriate language, formality level, respect throughout conversation
+- Tone (1-10): Friendliness, appropriateness, emotional intelligence in conversation
+- Clarity (1-10): Clear expression of ideas, easy to understand throughout
+- Empathy (1-10): Understanding of others, emotional awareness, considerate responses
+- Grammar (1-10): Overall grammatical accuracy, sentence structure, syntax
+- Vocabulary (1-10): Word choice, range, appropriateness throughout conversation
+- Fluency (1-10): Natural flow, coherence, ease of expression
 
 FEEDBACK REQUIREMENTS:
 Provide a comprehensive analysis in the following JSON format (use the exact structure):
 
 {
   "overallScore": number (1-10),
+  "professionalism": number (1-10),
+  "tone": number (1-10),
+  "clarity": number (1-10),
+  "empathy": number (1-10),
   "strengths": [
     "List 2-4 specific strengths observed in their English usage throughout the conversation"
   ],
@@ -335,7 +364,7 @@ ANALYSIS GUIDELINES:
 5. Balance criticism with encouragement
 6. Consider their proficiency level and learning goals
 7. Provide practical, actionable suggestions
-8. Analyze grammar, vocabulary, pronunciation, and fluency patterns
+8. Score professionalism, tone, clarity, and empathy based on overall conversation
 9. Give specific examples from their messages
 10. Provide concrete improvement suggestions
 11. Consider conversation context and scenario
@@ -407,15 +436,25 @@ IMPORTANT: Return ONLY valid JSON. Do not include any additional text or explana
         const hasProperPunctuation = /[.!?]/.test(userText);
         const hasContractions = /(don't|can't|won't|isn't|aren't|wasn't|weren't)/i.test(userText);
         const hasQuestions = /\?/.test(userText);
+        const hasPoliteWords = /(please|thank you|thanks|excuse me|sorry)/i.test(userText);
+        const hasEmotionalWords = /(feel|think|believe|hope|wish|sorry|happy|sad|excited)/i.test(userText);
         
         // Enhanced scoring based on conversation analysis
         const grammarScore = hasGrammarIssues ? 4 : (hasProperPunctuation ? 7 : 6);
         const vocabularyScore = hasComplexWords ? 8 : (wordCount > 10 ? 6 : 5);
         const fluencyScore = hasContractions ? 7 : 6;
-        const overallScore = Math.round((grammarScore + vocabularyScore + fluencyScore) / 3);
+        const professionalismScore = hasPoliteWords ? 8 : (hasBasicGreeting ? 7 : 6);
+        const toneScore = hasPoliteWords ? 8 : (hasBasicGreeting ? 7 : 6);
+        const clarityScore = hasQuestions ? 7 : (hasProperPunctuation ? 7 : 6);
+        const empathyScore = hasEmotionalWords ? 8 : (hasPoliteWords ? 7 : 5);
+        const overallScore = Math.round((grammarScore + vocabularyScore + fluencyScore + professionalismScore + toneScore + clarityScore + empathyScore) / 7);
         
         feedbackData = {
           overallScore: overallScore,
+          professionalism: professionalismScore,
+          tone: toneScore,
+          clarity: clarityScore,
+          empathy: empathyScore,
           strengths: hasBasicGreeting ? ["Good greeting etiquette", "Clear communication", "Engaged in conversation"] : ["Attempted communication", "Participated in conversation"],
           areasForImprovement: hasGrammarIssues ? ["Grammar accuracy", "Sentence structure", "Subject-verb agreement"] : ["Vocabulary expansion", "Grammar practice", "Sentence variety"],
           grammarAnalysis: {
@@ -439,10 +478,8 @@ IMPORTANT: Return ONLY valid JSON. Do not include any additional text or explana
       }
     }
 
-    // Validate feedback structure
-    const requiredFields = analyzeIndividual
-      ? ['overallScore', 'professionalism', 'tone', 'clarity', 'empathy', 'strengths', 'areasForImprovement', 'grammarAnalysis', 'vocabularyAnalysis', 'pronunciationTips', 'fluencyAssessment', 'recommendations', 'nextSteps', 'encouragement']
-      : ['overallScore', 'strengths', 'areasForImprovement', 'grammarAnalysis', 'vocabularyAnalysis', 'pronunciationTips', 'fluencyAssessment', 'recommendations', 'nextSteps', 'encouragement'];
+    // Validate feedback structure and ensure all required fields are present
+    const requiredFields = ['overallScore', 'professionalism', 'tone', 'clarity', 'empathy', 'strengths', 'areasForImprovement', 'grammarAnalysis', 'vocabularyAnalysis', 'pronunciationTips', 'fluencyAssessment', 'recommendations', 'nextSteps', 'encouragement'];
 
     const missingFields = requiredFields.filter(field => !feedbackData[field]);
     if (missingFields.length > 0) {
@@ -464,6 +501,27 @@ IMPORTANT: Return ONLY valid JSON. Do not include any additional text or explana
         else if (field === 'nextSteps') feedbackData[field] = ["Continue learning"];
         else if (field === 'encouragement') feedbackData[field] = "Keep up the good work!";
       });
+    }
+
+    // Ensure scores are within valid range (1-10)
+    ['overallScore', 'professionalism', 'tone', 'clarity', 'empathy'].forEach(scoreField => {
+      if (feedbackData[scoreField] < 1) feedbackData[scoreField] = 1;
+      if (feedbackData[scoreField] > 10) feedbackData[scoreField] = 10;
+    });
+
+    if (feedbackData.grammarAnalysis && feedbackData.grammarAnalysis.grammarScore) {
+      if (feedbackData.grammarAnalysis.grammarScore < 1) feedbackData.grammarAnalysis.grammarScore = 1;
+      if (feedbackData.grammarAnalysis.grammarScore > 10) feedbackData.grammarAnalysis.grammarScore = 10;
+    }
+
+    if (feedbackData.vocabularyAnalysis && feedbackData.vocabularyAnalysis.vocabularyScore) {
+      if (feedbackData.vocabularyAnalysis.vocabularyScore < 1) feedbackData.vocabularyAnalysis.vocabularyScore = 1;
+      if (feedbackData.vocabularyAnalysis.vocabularyScore > 10) feedbackData.vocabularyAnalysis.vocabularyScore = 10;
+    }
+
+    if (feedbackData.fluencyAssessment && feedbackData.fluencyAssessment.fluencyScore) {
+      if (feedbackData.fluencyAssessment.fluencyScore < 1) feedbackData.fluencyAssessment.fluencyScore = 1;
+      if (feedbackData.fluencyAssessment.fluencyScore > 10) feedbackData.fluencyAssessment.fluencyScore = 10;
     }
 
     // Generate conversation stats
@@ -500,4 +558,4 @@ IMPORTANT: Return ONLY valid JSON. Do not include any additional text or explana
       }
     );
   }
-} 
+}

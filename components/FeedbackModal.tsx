@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -27,12 +27,14 @@ import {
   Clock,
   MessageSquare,
   BarChart3,
-  RefreshCw,
-  Zap,
 } from "lucide-react";
 
 interface FeedbackData {
   overallScore: number;
+  professionalism?: number;
+  tone?: number;
+  clarity?: number;
+  empathy?: number;
   strengths: string[];
   areasForImprovement: string[];
   grammarAnalysis: {
@@ -82,8 +84,6 @@ export function FeedbackModal({
   const [feedback, setFeedback] = useState<FeedbackData | null>(null);
   const [stats, setStats] = useState<ConversationStats | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [lastUpdateTime, setLastUpdateTime] = useState<Date | null>(null);
-  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const generateFeedback = async () => {
     if (messages.length === 0) {
@@ -120,7 +120,8 @@ export function FeedbackModal({
 
       setFeedback(data.feedback);
       setStats(data.conversationStats);
-      setLastUpdateTime(new Date());
+
+      console.log("Feedback generated:", data.feedback);
       
       if (onFeedbackGenerated) {
         onFeedbackGenerated(data.feedback);
@@ -133,68 +134,30 @@ export function FeedbackModal({
     }
   };
 
-  const refreshFeedback = async () => {
-    setIsRefreshing(true);
-    await generateFeedback();
-    setIsRefreshing(false);
-  };
-
   const handleOpen = () => {
     setIsOpen(true);
-    if (!feedback) {
-      generateFeedback();
-    }
+    generateFeedback(); // always generate new feedback
   };
 
   const getScoreColor = (score: number) => {
-    if (score >= 8) return "text-green-600";
-    if (score >= 6) return "text-yellow-600";
-    return "text-red-600";
+    if (score >= 8) return "bg-green-500";
+    if (score >= 6) return "bg-yellow-500";
+    return "bg-red-500";
   };
 
-  const getScoreBgColor = (score: number) => {
-    if (score >= 8) return "bg-green-100";
-    if (score >= 6) return "bg-yellow-100";
-    return "bg-red-100";
-  };
-
-  const getScoreLabel = (score: number) => {
-    if (score >= 9) return "Excellent";
-    if (score >= 8) return "Very Good";
-    if (score >= 7) return "Good";
-    if (score >= 6) return "Fair";
-    if (score >= 5) return "Needs Improvement";
-    return "Poor";
-  };
-
-  const renderScore = (score: number, label: string) => (
-    <div className="flex items-center gap-2">
-      <div className={`w-12 h-12 rounded-full ${getScoreBgColor(score)} flex items-center justify-center`}>
-        <span className={`text-lg font-bold ${getScoreColor(score)}`}>{score}</span>
+  const renderScoreBar = (label: string, score: number) => (
+    <div className="mb-4">
+      <div className="flex justify-between items-center mb-2">
+        <span className="text-sm font-medium text-gray-700">{label}</span>
+        <span className="text-sm font-bold text-gray-900">{score}/10</span>
       </div>
-      <div>
-        <div className="font-medium">{label}</div>
-        <div className="text-xs text-gray-500">{getScoreLabel(score)}</div>
-        <Progress value={score * 10} className="w-20 h-2" />
+      <div className="w-full bg-gray-200 rounded-full h-2">
+        <div
+          className={`h-2 rounded-full ${getScoreColor(score)}`}
+          style={{ width: `${(score / 10) * 100}%` }}
+        ></div>
       </div>
     </div>
-  );
-
-  const renderList = (items: string[], icon: React.ReactNode, title: string, color: string) => (
-    <Card className="p-4">
-      <div className="flex items-center gap-2 mb-3">
-        {icon}
-        <h3 className={`font-semibold ${color}`}>{title}</h3>
-      </div>
-      <ul className="space-y-2">
-        {items.map((item, index) => (
-          <li key={index} className="flex items-start gap-2 text-sm">
-            <div className="w-1.5 h-1.5 rounded-full bg-gray-400 mt-2 flex-shrink-0"></div>
-            <span>{item}</span>
-          </li>
-        ))}
-      </ul>
-    </Card>
   );
 
   return (
@@ -211,27 +174,8 @@ export function FeedbackModal({
       </DialogTrigger>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
         <DialogHeader>
-          <DialogTitle className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Award className="w-5 h-5" />
-              English Learning Feedback
-            </div>
-            <div className="flex items-center gap-2">
-              {lastUpdateTime && (
-                <span className="text-xs text-gray-500">
-                  Last updated: {lastUpdateTime.toLocaleTimeString()}
-                </span>
-              )}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={refreshFeedback}
-                disabled={isRefreshing}
-                className="h-8 w-8 p-0"
-              >
-                <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-              </Button>
-            </div>
+          <DialogTitle className="text-2xl font-bold text-blue-600 text-center">
+            Feedback
           </DialogTitle>
         </DialogHeader>
 
@@ -241,7 +185,6 @@ export function FeedbackModal({
               <div className="text-center">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
                 <p className="text-gray-600">Analyzing your conversation...</p>
-                <p className="text-xs text-gray-500 mt-2">This may take a few seconds</p>
               </div>
             </div>
           )}
@@ -255,87 +198,97 @@ export function FeedbackModal({
             </Card>
           )}
 
-          {feedback && stats && (
-            <div className="space-y-6">
-              {/* Conversation Stats */}
-              <Card className="p-4 bg-blue-50 border-blue-200">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-2">
-                      <MessageSquare className="w-4 h-4 text-blue-600" />
-                      <span className="text-sm text-blue-700">
-                        {`${stats.userMessages} messages analyzed`}
-                      </span>
+          {feedback && (
+            <div className="space-y-6 px-4">
+              {/* Score Section */}
+              <Card className="p-6 border-2 border-gray-200 rounded-xl">
+                <div className="flex items-center gap-2 mb-6">
+                  <BarChart3 className="w-5 h-5 text-blue-600" />
+                  <h2 className="text-lg font-bold text-gray-800">Score</h2>
+                </div>
+                
+                <div className="space-y-4">
+                  {feedback.professionalism && renderScoreBar("Professionalism", feedback.professionalism)}
+                  {feedback.tone && renderScoreBar("Tone", feedback.tone)}
+                  {feedback.clarity && renderScoreBar("Clarity", feedback.clarity)}
+                  {feedback.empathy && renderScoreBar("Empathy", feedback.empathy)}
+                  
+                  {/* Overall Score with different styling */}
+                  <div className="pt-4 border-t border-gray-200">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-sm font-bold text-gray-900">Overall Score</span>
+                      <span className="text-sm font-bold text-gray-900">{feedback.overallScore}/10</span>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <BookOpen className="w-4 h-4 text-blue-600" />
-                      <span className="text-sm text-blue-700">
-                        Scenario: {stats.scenario}
-                      </span>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div
+                        className="h-2 rounded-full bg-blue-500"
+                        style={{ width: `${(feedback.overallScore / 10) * 100}%` }}
+                      ></div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Zap className="w-4 h-4 text-green-600" />
-                      <span className="text-sm text-green-700">
-                        Real-time Analysis
-                      </span>
-                    </div>
-                  </div>
-                  <div className="text-xs text-gray-500">
-                    {new Date(stats.analyzedAt).toLocaleDateString()}
                   </div>
                 </div>
               </Card>
 
-              {/* Overall Score */}
-              <Card className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-xl font-bold">Overall Performance</h2>
-                  <div className="flex items-center gap-2">
-                    <Star className="w-5 h-5 text-yellow-500" />
-                    <span className={`text-2xl font-bold ${getScoreColor(feedback.overallScore)}`}>
-                      {feedback.overallScore}/10
-                    </span>
-                    <span className="text-sm text-gray-500">({getScoreLabel(feedback.overallScore)})</span>
-                  </div>
+              {/* What You did well */}
+              <Card className="p-6 border-2 border-gray-200 rounded-xl">
+                <div className="flex items-center gap-2 mb-4">
+                  <CheckCircle className="w-5 h-5 text-green-600" />
+                  <h2 className="text-lg font-bold text-green-700">What You did well</h2>
                 </div>
-                <Progress value={feedback.overallScore * 10} className="h-3" />
+                <ul className="space-y-3">
+                  {feedback.strengths.map((strength, index) => (
+                    <li key={index} className="flex items-start gap-3">
+                      <div className="w-2 h-2 bg-gray-400 rounded-full mt-2 flex-shrink-0"></div>
+                      <span className="text-gray-700 text-sm leading-relaxed">{strength}</span>
+                    </li>
+                  ))}
+                </ul>
               </Card>
 
-              {/* Detailed Scores */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {renderScore(feedback.grammarAnalysis.grammarScore, "Grammar")}
-                {renderScore(feedback.vocabularyAnalysis.vocabularyScore, "Vocabulary")}
-                {renderScore(feedback.fluencyAssessment.fluencyScore, "Fluency")}
-              </div>
+              {/* What You can improve */}
+              <Card className="p-6 border-2 border-gray-200 rounded-xl">
+                <div className="flex items-center gap-2 mb-4">
+                  <AlertCircle className="w-5 h-5 text-yellow-600" />
+                  <h2 className="text-lg font-bold text-yellow-700">What You can improve</h2>
+                </div>
+                <ul className="space-y-3">
+                  {feedback.areasForImprovement.map((area, index) => (
+                    <li key={index} className="flex items-start gap-3">
+                      <div className="w-2 h-2 bg-gray-400 rounded-full mt-2 flex-shrink-0"></div>
+                      <span className="text-gray-700 text-sm leading-relaxed">{area}</span>
+                    </li>
+                  ))}
+                </ul>
+              </Card>
 
-              {/* Strengths and Areas for Improvement */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {renderList(
-                  feedback.strengths,
-                  <CheckCircle className="w-4 h-4 text-green-600" />,
-                  "What You did well",
-                  "text-green-700"
-                )}
-                {renderList(
-                  feedback.areasForImprovement,
-                  <Target className="w-4 h-4 text-orange-600" />,
-                  "What You can improve",
-                  "text-orange-700"
-                )}
-              </div>
+              {/* One suggestion to improve future interactions */}
+              <Card className="p-6 border-2 border-gray-200 rounded-xl">
+                <div className="flex items-center gap-2 mb-4">
+                  <Lightbulb className="w-5 h-5 text-blue-600" />
+                  <h2 className="text-lg font-bold text-blue-700">One suggestion to improve future interactions</h2>
+                </div>
+                <ul className="space-y-3">
+                  {feedback.recommendations.map((recommendation, index) => (
+                    <li key={index} className="flex items-start gap-3">
+                      <div className="w-2 h-2 bg-gray-400 rounded-full mt-2 flex-shrink-0"></div>
+                      <span className="text-gray-700 text-sm leading-relaxed">{recommendation}</span>
+                    </li>
+                  ))}
+                </ul>
+              </Card>
 
-              {/* Grammar Analysis */}
+              {/* Additional sections that might be useful but not in the image */}
               {feedback.grammarAnalysis.commonErrors.length > 0 && (
-                <Card className="p-4 border-orange-200 bg-orange-50">
-                  <div className="flex items-center gap-2 mb-3">
-                    <AlertCircle className="w-4 h-4 text-orange-600" />
-                    <h3 className="font-semibold text-orange-700">Common Grammar Errors</h3>
+                <Card className="p-6 border-2 border-gray-200 rounded-xl">
+                  <div className="flex items-center gap-2 mb-4">
+                    <AlertCircle className="w-5 h-5 text-orange-600" />
+                    <h2 className="text-lg font-bold text-orange-700">Grammar Notes</h2>
                   </div>
-                  <ul className="space-y-2">
+                  <ul className="space-y-3">
                     {feedback.grammarAnalysis.commonErrors.map((error, index) => (
-                      <li key={index} className="flex items-start gap-2 text-sm">
-                        <div className="w-1.5 h-1.5 rounded-full bg-orange-400 mt-2 flex-shrink-0"></div>
-                        <span>{error}</span>
+                      <li key={index} className="flex items-start gap-3">
+                        <div className="w-2 h-2 bg-gray-400 rounded-full mt-2 flex-shrink-0"></div>
+                        <span className="text-gray-700 text-sm leading-relaxed">{error}</span>
                       </li>
                     ))}
                   </ul>
@@ -343,80 +296,21 @@ export function FeedbackModal({
               )}
 
               {/* Vocabulary Suggestions */}
-              <Card className="p-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <BookOpen className="w-4 h-4 text-blue-600" />
-                  <h3 className="font-semibold text-blue-700">Vocabulary Assessment</h3>
-                </div>
-                <p className="text-sm text-gray-600 mb-3">{feedback.vocabularyAnalysis.vocabularyRange}</p>
-                <div>
-                  <h4 className="font-medium mb-2">Suggested Words to Learn:</h4>
+              {feedback.vocabularyAnalysis.suggestedWords.length > 0 && (
+                <Card className="p-6 border-2 border-gray-200 rounded-xl">
+                  <div className="flex items-center gap-2 mb-4">
+                    <BookOpen className="w-5 h-5 text-purple-600" />
+                    <h2 className="text-lg font-bold text-purple-700">Vocabulary Suggestions</h2>
+                  </div>
                   <div className="flex flex-wrap gap-2">
                     {feedback.vocabularyAnalysis.suggestedWords.map((word, index) => (
-                      <Badge key={index} variant="secondary" className="text-xs">
+                      <Badge key={index} variant="secondary" className="text-xs px-3 py-1">
                         {word}
                       </Badge>
                     ))}
                   </div>
-                </div>
-              </Card>
-
-              {/* Pronunciation Tips */}
-              <Card className="p-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <Mic className="w-4 h-4 text-purple-600" />
-                  <h3 className="font-semibold text-purple-700">Pronunciation Tips</h3>
-                </div>
-                <ul className="space-y-2">
-                  {feedback.pronunciationTips.map((tip, index) => (
-                    <li key={index} className="flex items-start gap-2 text-sm">
-                      <div className="w-1.5 h-1.5 rounded-full bg-purple-400 mt-2 flex-shrink-0"></div>
-                      <span>{tip}</span>
-                    </li>
-                  ))}
-                </ul>
-              </Card>
-
-              {/* Recommendations */}
-              <Card className="p-4 border-green-200 bg-green-50">
-                <div className="flex items-center gap-2 mb-3">
-                  <Lightbulb className="w-4 h-4 text-green-600" />
-                  <h3 className="font-semibold text-green-700">Recommendations</h3>
-                </div>
-                <ul className="space-y-2">
-                  {feedback.recommendations.map((rec, index) => (
-                    <li key={index} className="flex items-start gap-2 text-sm">
-                      <div className="w-1.5 h-1.5 rounded-full bg-green-400 mt-2 flex-shrink-0"></div>
-                      <span>{rec}</span>
-                    </li>
-                  ))}
-                </ul>
-              </Card>
-
-              {/* Next Steps */}
-              <Card className="p-4 border-blue-200 bg-blue-50">
-                <div className="flex items-center gap-2 mb-3">
-                  <Clock className="w-4 h-4 text-blue-600" />
-                  <h3 className="font-semibold text-blue-700">Immediate Next Steps</h3>
-                </div>
-                <ul className="space-y-2">
-                  {feedback.nextSteps.map((step, index) => (
-                    <li key={index} className="flex items-start gap-2 text-sm">
-                      <div className="w-1.5 h-1.5 rounded-full bg-blue-400 mt-2 flex-shrink-0"></div>
-                      <span>{step}</span>
-                    </li>
-                  ))}
-                </ul>
-              </Card>
-
-              {/* Encouragement */}
-              <Card className="p-4 border-yellow-200 bg-yellow-50">
-                <div className="flex items-center gap-2 mb-3">
-                  <Award className="w-4 h-4 text-yellow-600" />
-                  <h3 className="font-semibold text-yellow-700">Keep Going!</h3>
-                </div>
-                <p className="text-sm italic">{feedback.encouragement}</p>
-              </Card>
+                </Card>
+              )}
             </div>
           )}
         </ScrollArea>

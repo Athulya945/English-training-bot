@@ -103,9 +103,10 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const { messages, scenario, userProfile } = body;
+    const { messages, scenario, userProfile, userLanguage } = body;
 
     console.log("Request body received:", JSON.stringify(body, null, 2));
+    console.log("Scenario received:", scenario);
 
     if (!messages || !Array.isArray(messages)) {
       return new Response(JSON.stringify({ error: "Invalid messages format" }), {
@@ -124,47 +125,52 @@ export async function POST(req: Request) {
 
     console.log("User message:", userMessage);
 
-    // Make scenario optional - provide default if not present
-    const defaultScenario = {
-      name: "general-conversation",
-      mode: "conversation",
-      specialization: "none",
-      prompt: ""
-    };
+    // Enhanced system prompt with scenario-specific instructions
+    let systemPrompt = `You are a specialized English language tutor. Your primary role is to help users practice English through immersive, scenario-based interactions.
 
-    const currentScenario = scenario || defaultScenario;
+IMPORTANT CONTEXT:
+- User Background: ${userProfile?.background || 'general learner'}
+- Proficiency Level: ${userProfile?.proficiency || 'intermediate'}  
+- Learning Goals: ${userProfile?.goals || 'improve English communication'}
+- Interface Language: ${userLanguage || 'english'}
 
-    // Enhanced system prompt with grammar correction
-    const systemPrompt = `You are a helpful English language tutor. Respond naturally and conversationally to help the user practice English. Keep your responses concise (1-3 sentences) and encouraging.
+CORE INSTRUCTIONS:
+1. **Stay in Character**: You must fully embody the role specified in the scenario below. Don't break character or mention that you're an AI tutor.
 
-IMPORTANT INSTRUCTIONS:
-1. **Grammar Correction**: When the user speaks in English, identify any grammar mistakes and provide gentle corrections. Format your response as:
-   - First, acknowledge their message naturally
-   - Then, if there are grammar errors, say "By the way, the correct way to say that would be: [corrected version]"
-   - Keep corrections brief and encouraging
+2. **Grammar Correction**: When the user makes grammar mistakes, provide gentle corrections using this format:
+   - First, respond naturally to their message in character
+   - Then add: "By the way, the correct way to say that would be: [corrected version]"
+   - Keep corrections encouraging and brief
 
-2. **Voice Optimization**: 
-   - Remove unnecessary punctuation marks (quotes, asterisks, etc.) from your responses
-   - Use natural speech patterns
+3. **Voice Optimization**: 
+   - Remove unnecessary punctuation marks from responses
+   - Use natural, conversational speech patterns
    - Avoid reading punctuation aloud
-   - Keep responses conversational and flowing
 
-3. **Teaching Approach**:
-   - Be supportive and encouraging
-   - Provide gentle corrections when needed
-   - Ask follow-up questions to keep the conversation flowing
-   - Focus on practical, everyday English
+4. **Response Length**: Keep responses concise (1-3 sentences) to maintain natural conversation flow.`;
 
-User Profile:
-- Background: ${userProfile?.background || 'general learner'}
-- Level: ${userProfile?.proficiency || 'intermediate'}
-- Goals: ${userProfile?.goals || 'improve English communication'}
+    // Add scenario-specific instructions
+    if (scenario && scenario.id) {
+      console.log("Adding scenario-specific instructions for:", scenario.id);
+      systemPrompt += `\n\n${getScenarioInstructions(scenario)}`;
+    } else {
+      console.log("No scenario provided, using general conversation mode");
+      systemPrompt += `\n\n${getScenarioInstructions({ id: 'general-conversation' })}`;
+    }
 
-Current scenario: ${currentScenario?.name || 'general conversation'}
+    // Add language-specific instructions
+    if (userLanguage === 'kannada') {
+      systemPrompt += `\n\nLANGUAGE SUPPORT:
+- The user's interface is in Kannada, so they may need extra support with English
+- Be patient with pronunciation and grammar
+- Provide simple, clear explanations
+- Use basic vocabulary when possible
+- Encourage them in a supportive manner`;
+    }
 
-Remember: Speak naturally as if in a real conversation, not reading from a script.`;
+    systemPrompt += `\n\nRemember: Stay fully in character for the scenario. Respond as the character would, then provide grammar corrections if needed.`;
 
-    console.log("System prompt:", systemPrompt);
+    console.log("Final system prompt:", systemPrompt);
 
     // Step 1: Generate LLM response with better error handling
     try {
@@ -177,21 +183,25 @@ Remember: Speak naturally as if in a real conversation, not reading from a scrip
           ...messages
         ],
         temperature: 0.7,
-        maxTokens: 200, // Reduced for more focused responses
+        maxTokens: 200,
       });
 
       console.log("Gemini API called successfully, processing stream...");
 
       // Properly consume the stream with timeout
       let fullText = '';
+      let chunkCount = 0;
       const streamTimeout = setTimeout(() => {
         throw new Error("Stream processing timeout");
-      }, 10000); // 10 second timeout
+      }, 10000);
 
       try {
         for await (const chunk of result.textStream) {
-          fullText += chunk;
-          console.log("Received chunk:", chunk);
+          if (chunk && chunk.trim().length > 0) {
+            fullText += chunk;
+            chunkCount++;
+            console.log("Received chunk:", chunk);
+          }
         }
         clearTimeout(streamTimeout);
       } catch (streamError) {
@@ -201,17 +211,16 @@ Remember: Speak naturally as if in a real conversation, not reading from a scrip
 
       console.log("Complete LLM response:", fullText);
 
-      // Clean the response for better voice synthesis using utility function
+      // Clean the response for better voice synthesis
       let cleanedText = cleanTextForVoice(fullText);
 
-      // Better validation of the response
+      // Fallback if model returns empty response
       if (!cleanedText || cleanedText.trim() === '' || cleanedText.length < 5) {
-        throw new Error("Empty or invalid response from AI model");
+        console.warn("AI model returned empty response. Using scenario-specific fallback.");
+        cleanedText = getScenarioFallbackResponse(scenario, userLanguage);
       }
 
       console.log("Cleaned LLM response for voice synthesis:", cleanedText);
-
-      console.log("LLM text generated successfully, synthesizing speech...");
 
       // Step 2: Convert text to speech with accent preference
       const accent = userProfile?.accentPreference || 'en-GB';
@@ -223,14 +232,15 @@ Remember: Speak naturally as if in a real conversation, not reading from a scrip
       // Step 3: Return both text and base64-encoded audio
       return new Response(
         JSON.stringify({
-          text: cleanedText, // Use cleaned text for voice
-          originalText: fullText, // Keep original for display
+          text: cleanedText,
+          originalText: fullText,
           audio: audioBase64,
-          scenarioTips: getScenarioTips(currentScenario),
+          scenarioTips: getScenarioTips(scenario),
           debug: {
             modelUsed: GEMINI_MODEL,
             textLength: cleanedText.length,
-            audioLength: audioBase64.length
+            audioLength: audioBase64.length,
+            scenarioId: scenario?.id || 'none'
           }
         }),
         {
@@ -244,19 +254,8 @@ Remember: Speak naturally as if in a real conversation, not reading from a scrip
     } catch (aiError) {
       console.error("AI model error details:", aiError);
       
-      // More specific error handling
-      if (aiError instanceof Error) {
-        if (aiError.message.includes('API key')) {
-          throw new Error("Invalid or expired Google AI API key");
-        } else if (aiError.message.includes('quota')) {
-          throw new Error("API quota exceeded - please try again later");
-        } else if (aiError.message.includes('timeout')) {
-          throw new Error("AI model response timeout - please try again");
-        }
-      }
-      
-      // Provide a fallback response when AI fails
-      const fallbackText = "I'm having trouble connecting to my language processing system right now. Let's try a simple conversation - how was your day?";
+      // Provide scenario-specific fallback response
+      const fallbackText = getScenarioFallbackResponse(scenario, userLanguage);
       
       try {
         const accent = userProfile?.accentPreference || 'en-GB';
@@ -267,7 +266,7 @@ Remember: Speak naturally as if in a real conversation, not reading from a scrip
           JSON.stringify({
             text: fallbackText,
             audio: audioBase64,
-            scenarioTips: getScenarioTips(currentScenario),
+            scenarioTips: getScenarioTips(scenario),
             error: "AI model unavailable - using fallback response"
           }),
           {
@@ -285,7 +284,6 @@ Remember: Speak naturally as if in a real conversation, not reading from a scrip
   } catch (error) {
     console.error("POST handler error:", error);
 
-    // Provide more specific error messages
     let errorMessage = "Service temporarily unavailable";
     let errorDetails = "Unknown error";
 
@@ -316,114 +314,331 @@ Remember: Speak naturally as if in a real conversation, not reading from a scrip
   }
 }
 
-// Scenario-specific instructions
+// Enhanced scenario-specific instructions
 function getScenarioInstructions(scenario: any): string {
+  const scenarioId = scenario?.id || scenario?.name || 'general-conversation';
+  
   const scenarios: Record<string, string> = {
-    // Engineering Graduates
-    "technical-interview": `
-      You are a tech hiring manager conducting a mock interview:
-      - Focus on technical vocabulary and clarity
-      - Include common interview questions for engineers
-      - Evaluate problem explanation skills
-      - Provide feedback on STAR method responses
+    // Engineering/Technical
+    "tech-interview": `
+      SCENARIO: You are a senior software engineer conducting a technical interview.
+      CHARACTER: Professional, knowledgeable, but encouraging. Ask probing technical questions.
+      FOCUS: Technical vocabulary, problem-solving explanations, STAR method responses.
+      SAMPLE INTERACTIONS: 
+      - Ask about past projects: "Tell me about a challenging technical problem you solved"
+      - Discuss technologies: "What's your experience with [specific technology]?"
+      - Problem-solving: "How would you approach debugging a performance issue?"
     `,
     
-    // ITI/Diploma Students
-    "workshop-communication": `
-      You are a senior technician in a workshop:
-      - Use practical, hands-on vocabulary
-      - Focus on safety instructions and tool terminology
-      - Simulate supervisor-worker conversations
-      - Include measurement and precision language
+    "project-presentation": `
+      SCENARIO: You are a project manager listening to a technical presentation.
+      CHARACTER: Engaged listener who asks clarifying questions about technical details.
+      FOCUS: Clear explanations of technical concepts, project methodology, results.
+      SAMPLE INTERACTIONS:
+      - Ask for clarifications: "Can you explain how that algorithm works?"
+      - Question assumptions: "What led you to choose this approach?"
+      - Discuss challenges: "What obstacles did you face during development?"
     `,
-    
-    // Working Professionals
-    "client-presentation": `
-      You are a potential client listening to a pitch:
-      - Evaluate business vocabulary and professionalism
-      - Focus on persuasive language and clarity
-      - Include Q&A about project specifics
-      - Provide feedback on executive presence
+
+    // ITI/Workshop
+    "workshop": `
+      SCENARIO: You are a senior technician supervising in a workshop.
+      CHARACTER: Experienced, safety-focused, practical communicator.
+      FOCUS: Tool terminology, safety instructions, measurement precision, troubleshooting.
+      SAMPLE INTERACTIONS:
+      - Give instructions: "First, make sure you're wearing safety goggles"
+      - Ask about tools: "Which wrench size do you need for this bolt?"
+      - Discuss procedures: "What's the next step in this assembly process?"
     `,
-    
-    // Business Communication
-    "corporate-email": `
-      You are a senior manager reviewing email drafts:
-      - Focus on formal business writing conventions
-      - Teach concise, professional email structures
-      - Highlight tone adjustments for different recipients
-      - Include common corporate phrases and idioms
+
+    "tools": `
+      SCENARIO: You are a workshop instructor teaching about tools and equipment.
+      CHARACTER: Patient teacher focused on proper tool usage and safety.
+      FOCUS: Tool names, proper usage, maintenance, safety procedures.
+      SAMPLE INTERACTIONS:
+      - Identify tools: "What tool would you use to measure this angle?"
+      - Explain usage: "Show me how you would properly hold this drill"
+      - Safety focus: "What safety precautions should you take first?"
     `,
-    
-    // Academic Researchers
-    "paper-feedback": `
-      You are a journal editor reviewing a paper:
-      - Focus on academic writing conventions
-      - Teach hedging language and citation phrases
-      - Highlight clear data presentation techniques
-      - Provide feedback on argument structure
+
+    // Professional/Business
+    "meeting": `
+      SCENARIO: You are a department head in a business meeting.
+      CHARACTER: Professional, focused on results, collaborative.
+      FOCUS: Business vocabulary, meeting etiquette, decision-making discussions.
+      SAMPLE INTERACTIONS:
+      - Discuss agenda: "Let's review the quarterly targets"
+      - Ask for updates: "What's the status on the client project?"
+      - Make decisions: "Based on this data, what do you recommend?"
     `,
-    
-    // General conversation
+
+    "presentation": `
+      SCENARIO: You are a potential client listening to a business pitch.
+      CHARACTER: Interested but critical, asking practical questions about ROI and implementation.
+      FOCUS: Business case presentation, handling objections, persuasive language.
+      SAMPLE INTERACTIONS:
+      - Challenge assumptions: "How do you know this will work in our market?"
+      - Ask about costs: "What's the total investment required?"
+      - Timeline questions: "How long will implementation take?"
+    `,
+
+    "negotiation": `
+      SCENARIO: You are a business partner in a negotiation meeting.
+      CHARACTER: Professional negotiator balancing firmness with collaboration.
+      FOCUS: Deal-making language, compromise, win-win solutions.
+      SAMPLE INTERACTIONS:
+      - Discuss terms: "We're flexible on timeline but need to discuss pricing"
+      - Find common ground: "What would make this work for both of us?"
+      - Handle objections: "I understand your concern. Let's explore alternatives"
+    `,
+
+    "email": `
+      SCENARIO: You are a senior colleague reviewing professional email drafts.
+      CHARACTER: Experienced professional focused on clear, effective communication.
+      FOCUS: Email structure, tone, professional language, conciseness.
+      SAMPLE INTERACTIONS:
+      - Review structure: "Your email should start with the main request"
+      - Suggest improvements: "This tone might come across as too casual"
+      - Clarify purpose: "What specific action do you want the recipient to take?"
+    `,
+
+    // Conversation Practice
+    "daily-life": `
+      SCENARIO: You are a friendly neighbor having a casual conversation.
+      CHARACTER: Warm, interested in everyday topics, encouraging.
+      FOCUS: Common daily activities, family, work, hobbies, local community.
+      SAMPLE INTERACTIONS:
+      - Morning chat: "How was your weekend? Did you do anything fun?"
+      - Discuss routines: "What time do you usually start work?"
+      - Share experiences: "Have you tried that new restaurant downtown?"
+    `,
+
+    "hobbies": `
+      SCENARIO: You are a club member discussing shared interests and hobbies.
+      CHARACTER: Enthusiastic about hobbies, encouraging participation.
+      FOCUS: Leisure activities, sports, creative pursuits, weekend plans.
+      SAMPLE INTERACTIONS:
+      - Explore interests: "What do you like to do in your free time?"
+      - Share experiences: "I love photography too! What type of camera do you use?"
+      - Make suggestions: "You should join our hiking group next weekend"
+    `,
+
+    // Kannada Support Scenarios
+    "kannada-conversation": `
+      SCENARIO: You are a friendly English tutor who understands Kannada culture.
+      CHARACTER: Patient, culturally aware, uses simple English, encouraging.
+      FOCUS: Basic English conversation with cultural context from Karnataka.
+      SAMPLE INTERACTIONS:
+      - Cultural bridge: "In English, we say 'good morning' instead of 'namaskara'"
+      - Simple explanations: "Let's practice greeting someone in English"
+      - Encourage practice: "Don't worry about mistakes. Let's try again"
+    `,
+
+    "kannada-vocabulary": `
+      SCENARIO: You are a vocabulary teacher helping build English-Kannada connections.
+      CHARACTER: Patient teacher who explains English words using familiar concepts.
+      FOCUS: Building vocabulary by connecting English words to Kannada equivalents.
+      SAMPLE INTERACTIONS:
+      - Word connections: "'Family' in English means 'kutumba' in Kannada"
+      - Practice usage: "Use this English word in a sentence"
+      - Cultural context: "This word is commonly used when..."
+    `,
+
+    "kannada-pronunciation": `
+      SCENARIO: You are a pronunciation coach familiar with Kannada accent challenges.
+      CHARACTER: Patient, focused on specific pronunciation challenges for Kannada speakers.
+      FOCUS: English sounds that are difficult for Kannada speakers.
+      SAMPLE INTERACTIONS:
+      - Sound practice: "Let's practice the 'th' sound, which doesn't exist in Kannada"
+      - Corrections: "Try putting your tongue between your teeth for 'the'"
+      - Encouragement: "Your pronunciation is improving with each practice"
+    `,
+
+    // Grammar focused
+    "tenses": `
+      SCENARIO: You are a grammar teacher focusing on verb tenses.
+      CHARACTER: Patient educator who uses practical examples.
+      FOCUS: Past, present, future tenses with real-life applications.
+      SAMPLE INTERACTIONS:
+      - Practice tenses: "Tell me what you did yesterday using past tense"
+      - Correct mistakes: "Remember, 'I go' becomes 'I went' for past tense"
+      - Apply learning: "Describe your plans for next week using future tense"
+    `,
+
+    "articles": `
+      SCENARIO: You are a grammar instructor focusing on articles (a, an, the).
+      CHARACTER: Detail-oriented teacher who explains rules with examples.
+      FOCUS: Proper usage of a, an, the in different contexts.
+      SAMPLE INTERACTIONS:
+      - Explain rules: "Use 'a' before consonant sounds, 'an' before vowel sounds"
+      - Practice examples: "Should you say 'a apple' or 'an apple'?"
+      - Real applications: "Let's practice using articles in sentences about your day"
+    `,
+
+    // Pronunciation focused
+    "minimal-pairs": `
+      SCENARIO: You are a pronunciation specialist working on similar-sounding words.
+      CHARACTER: Focused coach who emphasizes precise sound differences.
+      FOCUS: Words that sound similar but have different meanings.
+      SAMPLE INTERACTIONS:
+      - Sound distinction: "Listen to the difference between 'ship' and 'sheep'"
+      - Practice pairs: "Now you try saying both words clearly"
+      - Context usage: "Use each word in a sentence to show you know the difference"
+    `,
+
+    "intonation": `
+      SCENARIO: You are a speech coach focusing on rhythm and stress patterns.
+      CHARACTER: Enthusiastic about natural-sounding English rhythm.
+      FOCUS: Sentence stress, rhythm, question intonation.
+      SAMPLE INTERACTIONS:
+      - Practice stress: "In 'important', the stress is on the second syllable: im-POR-tant"
+      - Question patterns: "Notice how your voice goes up at the end of yes/no questions"
+      - Natural rhythm: "English has a natural beat. Let's practice with this sentence"
+    `,
+
+    // Default/General
     "general-conversation": `
-      You are an English tutor conducting a general lesson:
-      - Assess the learner's current level
-      - Focus on clear communication
-      - Provide balanced feedback
-      - Adapt to emerging needs
+      SCENARIO: You are a friendly English conversation partner.
+      CHARACTER: Encouraging, patient, interested in helping improve English through natural conversation.
+      FOCUS: Natural conversation flow, grammar correction, vocabulary building.
+      SAMPLE INTERACTIONS:
+      - Open conversation: "Hello! What would you like to talk about today?"
+      - Encourage sharing: "Tell me about something interesting that happened recently"
+      - Provide support: "Great job! Let's work on making that sentence even better"
     `,
-    
-    // Default Scenario
-    "default": `
-      You are an English tutor conducting a general lesson:
-      - Assess the learner's current level
-      - Focus on clear communication
-      - Provide balanced feedback
-      - Adapt to emerging needs
-    `
   };
 
-  return scenarios[scenario?.name] || scenarios.default;
+  return scenarios[scenarioId] || scenarios["general-conversation"];
 }
 
-// Scenario-specific tips
+// Enhanced scenario-specific tips
 function getScenarioTips(scenario: any): string[] {
+  const scenarioId = scenario?.id || scenario?.name || 'general-conversation';
+  
   const tips: Record<string, string[]> = {
-    "technical-interview": [
-      "Practice explaining projects using the STAR method",
-      "Prepare 2-3 questions to ask the interviewer",
-      "Use technical terms precisely"
+    "tech-interview": [
+      "Use the STAR method: Situation, Task, Action, Result",
+      "Prepare 2-3 technical questions to ask the interviewer", 
+      "Practice explaining complex concepts in simple terms"
     ],
-    "workshop-communication": [
-      "Learn the names of all tools you use regularly",
-      "Practice giving clear, concise instructions",
-      "Master safety-related vocabulary"
+    "project-presentation": [
+      "Start with the problem, then present your solution",
+      "Use visual aids and concrete examples",
+      "Practice handling technical questions confidently"
     ],
-    "client-presentation": [
-      "Structure your pitch: Problem-Solution-Benefit",
-      "Prepare for common objections",
-      "Use transition phrases between topics"
+    "workshop": [
+      "Learn the English names of all tools you use",
+      "Practice giving clear, step-by-step instructions",
+      "Focus on safety-related vocabulary and phrases"
     ],
-    "corporate-email": [
-      "Use clear subject lines",
-      "Put the main request early",
-      "Proofread for tone before sending"
+    "tools": [
+      "Memorize tool names and their specific functions",
+      "Practice describing tool usage and maintenance",
+      "Learn measurement and precision vocabulary"
     ],
-    "paper-feedback": [
-      "Use hedging language for claims",
-      "Keep methodology descriptions reproducible",
-      "Use signposting in your argument flow"
+    "meeting": [
+      "Use professional meeting phrases like 'I'd like to add...'",
+      "Practice summarizing key points clearly",
+      "Learn to ask clarifying questions politely"
+    ],
+    "presentation": [
+      "Structure: Problem → Solution → Benefits → Next Steps",
+      "Prepare answers for common objections",
+      "Use transition phrases to connect your ideas"
+    ],
+    "negotiation": [
+      "Practice win-win language: 'What if we...'",
+      "Learn to express flexibility while maintaining firm boundaries",
+      "Use conditional language: 'If you can..., then we could...'"
+    ],
+    "email": [
+      "Start with clear subject lines",
+      "Put your main request in the first paragraph",
+      "End with clear next steps or calls to action"
+    ],
+    "daily-life": [
+      "Practice describing your daily routine",
+      "Learn vocabulary for common activities",
+      "Focus on natural conversation starters"
+    ],
+    "hobbies": [
+      "Build vocabulary around your specific interests",
+      "Practice expressing opinions and preferences",
+      "Learn to ask follow-up questions about others' hobbies"
+    ],
+    "kannada-conversation": [
+      "Start with simple English phrases",
+      "Don't worry about perfect grammar initially", 
+      "Focus on being understood rather than being perfect"
+    ],
+    "kannada-vocabulary": [
+      "Connect new English words to familiar Kannada concepts",
+      "Practice using new words in simple sentences",
+      "Review vocabulary regularly to build retention"
+    ],
+    "kannada-pronunciation": [
+      "Practice sounds that don't exist in Kannada (like 'th')",
+      "Listen to native speakers and repeat",
+      "Record yourself to hear your progress"
+    ],
+    "tenses": [
+      "Practice with real examples from your daily life",
+      "Focus on one tense at a time until it feels natural",
+      "Use timeline words like 'yesterday', 'tomorrow', 'now'"
+    ],
+    "articles": [
+      "Remember: 'a' before consonant sounds, 'an' before vowel sounds",
+      "Use 'the' for specific things, 'a/an' for general things",
+      "Practice with common phrases until they feel automatic"
+    ],
+    "minimal-pairs": [
+      "Listen carefully to the differences between similar sounds",
+      "Practice in front of a mirror to see mouth positions",
+      "Use each word in context to reinforce the difference"
+    ],
+    "intonation": [
+      "Practice reading sentences with different emotions",
+      "Pay attention to where stress falls in sentences",
+      "Listen to native speakers and copy their rhythm patterns"
     ],
     "general-conversation": [
-      "Listen carefully before responding",
-      "Note down new vocabulary you encounter",
-      "Don't be afraid to ask for clarification"
+      "Focus on communication over perfection",
+      "Ask questions to keep conversations flowing",
+      "Practice active listening and responding naturally"
     ]
   };
 
-  return tips[scenario?.name] || [
-    "Listen carefully before responding",
-    "Note down new vocabulary you encounter",
-    "Don't be afraid to ask for clarification"
-  ];
+  return tips[scenarioId] || tips["general-conversation"];
+}
+
+// Scenario-specific fallback responses
+function getScenarioFallbackResponse(scenario: any, userLanguage: string): string {
+  const scenarioId = scenario?.id || scenario?.name || 'general-conversation';
+  const isKannada = userLanguage === 'kannada';
+  
+  const fallbacks: Record<string, { english: string; kannada: string }> = {
+    "tech-interview": {
+      english: "Let's start with a simple question - can you tell me about a recent project you worked on?",
+      kannada: "Let's start with a simple question - can you tell me about a recent project you worked on? (ಒಂದು ಸರಳ ಪ್ರಶ್ನೆಯಿಂದ ಪ್ರಾರಂಭಿಸೋಣ)"
+    },
+    "workshop": {
+      english: "Welcome to the workshop! What tools will you be using today?",
+      kannada: "Welcome to the workshop! What tools will you be using today? (ಕಾರ್ಯಾಗಾರಕ್ಕೆ ಸ್ವಾಗತ)"
+    },
+    "meeting": {
+      english: "Good morning! Let's discuss today's agenda. What items should we cover?",
+      kannada: "Good morning! Let's discuss today's agenda. (ಶುಭೋದಯ! ಇಂದಿನ ಕಾರ್ಯಸೂಚಿಯನ್ನು ಚರ್ಚಿಸೋಣ)"
+    },
+    "kannada-conversation": {
+      english: "ನಮಸ್ಕಾರ! Let's practice some English conversation. How are you feeling today?",
+      kannada: "ನಮಸ್ಕಾರ! ಇಂಗ್ಲಿಷ್ ಸಂಭಾಷಣೆಯನ್ನು ಅಭ್ಯಾಸ ಮಾಡೋಣ. How are you feeling today?"
+    },
+    "general-conversation": {
+      english: "Hello! I'm here to help you practice English. What would you like to talk about?",
+      kannada: "Hello! ನಾನು ನಿಮಗೆ ಇಂಗ್ಲಿಷ್ ಅಭ್ಯಾಸ ಮಾಡಲು ಸಹಾಯ ಮಾಡುತ್ತೇನೆ. What would you like to talk about?"
+    }
+  };
+
+  const fallback = fallbacks[scenarioId] || fallbacks["general-conversation"];
+  return isKannada ? fallback.kannada : fallback.english;
 }

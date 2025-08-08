@@ -34,12 +34,12 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useConversations, type Conversation } from "@/hooks/useConversations";
 import { AuthModal } from "@/components/AuthModal";
 import LanguageSelector, { languageOptions } from "./LanguageSelector";
-
 import { MessageBubble } from "./MessageBubble";
 import { GradientOrb } from "./Gradientorb";
 import { PushToTalkBar } from "@/components/PushToTalkBar";
 import Scenarios from "@/utils/Scenarios.json";
 import { FeedbackModal } from "@/components/FeedbackModal";
+import { FeedbackButton } from "@/components/FeedbackButton";
 
 // Type declarations for SpeechRecognition
 interface SpeechRecognitionEvent extends Event {
@@ -119,6 +119,7 @@ export default function TrainingChat() {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isLoadingConversation, setIsLoadingConversation] = useState(false);
+  
   const [activeTab, setActiveTab] = useState("scenarios");
   const [isRecording, setIsRecording] = useState(false);
   const [currentMode, setCurrentMode] = useState("conversation");
@@ -188,18 +189,85 @@ export default function TrainingChat() {
   const [activeScenarioId, setActiveScenarioId] = useState<string | null>(null);
   const [scenarioDetails, setScenarioDetails] = useState<ScenarioDetails | null>(null);
 
-  const handleScenarioClick = (scenarioId: string) => {
+  const handleScenarioClick = useCallback((scenarioId: string) => {
+    console.log("Scenario clicked:", scenarioId); // Debug log
+    
     setActiveScenarioId(scenarioId);
     const found = Scenarios.find((s) => s.id === scenarioId);
-    setScenarioDetails(found || null);
-    setChatMessages([]);
-
-    if (!found) {
-      console.error("Scenario not found");
+    
+    if (found) {
+      console.log("Found scenario:", found); // Debug log
+      setScenarioDetails({
+        id: found.id,
+        name: found.name,
+        description: found.description,
+        mode: found.mode || currentMode,
+        prompt: found.prompt || ""
+      });
+      
+      // Clear chat messages to start fresh with new scenario
+      setChatMessages([]);
+      
+      // Optional: Add a welcome message specific to the scenario
+      setTimeout(() => {
+        const welcomeMessage = getScenarioWelcomeMessage(found, selectedLanguage);
+        if (welcomeMessage) {
+          addMessage("assistant", welcomeMessage);
+        }
+      }, 500);
+    } else {
+      console.error("Scenario not found:", scenarioId);
+      setScenarioDetails(null);
     }
+  }, [currentMode, selectedLanguage,]);
+
+  const getScenarioWelcomeMessage = (scenario: any, language: string): string => {
+    const isKannada = language === 'kannada';
+    
+    const welcomeMessages: Record<string, { english: string; kannada: string }> = {
+      "tech-interview": {
+        english: "Hello! I'm the hiring manager for this technical interview. Please have a seat and tell me a bit about yourself.",
+        kannada: "Hello! I'm the hiring manager for this technical interview. (ನಾನು ತಾಂತ್ರಿಕ ಸಂದರ್ಶನದ ನೇಮಕಾತಿ ವ್ಯವಸ್ಥಾಪಕ)"
+      },
+      "project-presentation": {
+        english: "Good morning! I'm excited to hear about your project. Please go ahead and start your presentation.",
+        kannada: "Good morning! ನಿಮ್ಮ ಯೋಜನೆಯ ಬಗ್ಗೆ ಕೇಳಲು ಉತ್ಸುಕನಾಗಿದ್ದೇನೆ. Please start your presentation."
+      },
+      "workshop": {
+        english: "Welcome to the workshop! Safety first - make sure you have your protective equipment. What are we working on today?",
+        kannada: "Welcome to the workshop! ಮೊದಲು ಸುರಕ್ಷತೆ - make sure you have your protective equipment."
+      },
+      "meeting": {
+        english: "Good morning everyone! Let's start today's meeting. I have the agenda here - shall we begin?",
+        kannada: "Good morning everyone! ಇಂದಿನ ಸಭೆಯನ್ನು ಪ್ರಾರಂಭಿಸೋಣ. Let's start today's meeting."
+      },
+      "kannada-conversation": {
+        english: "ನಮಸ್ಕಾರ! I'm here to help you practice English conversation. ಇಂಗ್ಲಿಷ್ನಲ್ಲಿ ಮಾತನಾಡಲು ಪ್ರಯತ್ನಿಸಿ!",
+        kannada: "ನಮಸ್ಕಾರ! ನಾನು ನಿಮಗೆ ಇಂಗ್ಲಿಷ್ ಸಂಭಾಷಣೆಯನ್ನು ಅಭ್ಯಾಸ ಮಾಡಲು ಸಹಾಯ ಮಾಡುತ್ತೇನೆ."
+      },
+      "daily-life": {
+        english: "Hi there! I'm your neighbor. I was just heading out and thought I'd say hello. How's your day going?",
+        kannada: "Hi there! ನಾನು ನಿಮ್ಮ ನೆರೆಹೊರೆಯವನು. How's your day going?"
+      },
+      "tenses": {
+        english: "Let's work on verb tenses today! We'll practice past, present, and future. Tell me something you did yesterday.",
+        kannada: "ಇಂದು ಕ್ರಿಯಾಪದ ಕಾಲಗಳ ಮೇಲೆ ಕೆಲಸ ಮಾಡೋಣ! Tell me something you did yesterday."
+      }
+    };
+  
+    const scenarioId = scenario.id || scenario.name;
+    const welcome = welcomeMessages[scenarioId];
+    
+    if (welcome) {
+      return isKannada ? welcome.kannada : welcome.english;
+    }
+    
+    // Default welcome message
+    return isKannada 
+      ? "ನಮಸ್ಕಾರ! ಇಂಗ್ಲಿಷ್ ಅಭ್ಯಾಸ ಪ್ರಾರಂಭಿಸೋಣ!"
+      : "Hello! Let's start practicing English together!";
   };
 
-  // Enhanced addMessage function with automatic feedback triggering
   const addMessage = useCallback(
     (role: "user" | "assistant", content: string) => {
       const newMessage: ChatMessage = {
@@ -208,8 +276,7 @@ export default function TrainingChat() {
         content,
       };
       setChatMessages((prev) => [...prev, newMessage]);
-      
-      // Trigger automatic feedback after user messages (with debouncing)
+         // Trigger automatic feedback after user messages (with debouncing)
       if (role === "user") {
         const now = Date.now();
         if (now - lastFeedbackTime > 5000) { // Only trigger every 5 seconds
@@ -276,9 +343,9 @@ export default function TrainingChat() {
       // Update the last processed message reference
       lastProcessedMessageRef.current = text;
       
-              try {
-          setIsLoading(true);
-
+      try {
+        setIsLoading(true);
+  
         const messages = [
           ...chatMessages.map((msg) => ({
             role: msg.role,
@@ -286,64 +353,80 @@ export default function TrainingChat() {
           })),
           { role: "user", content: text },
         ];
-
+  
         // Add user message to UI after creating the messages array
         addMessage("user", text);
-
+  
         const currentLanguageOption = languageOptions.find((option: any) => option.id === selectedLanguage);
         
+        // CRITICAL FIX: Ensure scenario data is properly formatted and passed
+        const scenarioData = scenarioDetails ? {
+          id: scenarioDetails.id,
+          name: scenarioDetails.name,
+          description: scenarioDetails.description,
+          mode: scenarioDetails.mode,
+          prompt: scenarioDetails.prompt
+        } : null;
+  
+        console.log("Sending scenario data to API:", scenarioData); // Debug log
+        
+        const requestPayload = {
+          messages,
+          scenario: scenarioData, // Use properly formatted scenario data
+          userProfile: {
+            background: learnerType,
+            proficiency: "intermediate",
+            goals: "improve English skills",
+            accentPreference: "en-US"
+          },
+          userLanguage: selectedLanguage
+        };
+  
+        console.log("Full request payload:", requestPayload); // Debug log
+  
         const response = await fetch(currentLanguageOption?.voiceApiEndpoint || "/api/voicechat", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({
-            messages,
-            scenario: scenarioDetails,
-            userProfile: {
-              background: learnerType,
-              proficiency: "intermediate",
-              goals: "improve English skills",
-              accentPreference: "en-US"
-            },
-            userLanguage: selectedLanguage
-          }),
+          body: JSON.stringify(requestPayload),
         });
-
+  
         if (!response.ok) {
           throw new Error(`API Error: ${response.status} ${response.statusText}`);
         }
-
+  
         const data = await response.json();
         setIsLoading(false);
-
+  
         addMessage("assistant", data.text);
-
+  
+        // Audio playback logic remains the same...
         const base64 = data.audio.split(",")[1] || data.audio;
         const audioBlob = new Blob(
           [Uint8Array.from(atob(base64), (c) => c.charCodeAt(0))],
           { type: "audio/mpeg" }
         );
         const audioUrl = URL.createObjectURL(audioBlob);
-
+  
         if (audioRef.current) {
           audioRef.current.src = audioUrl;
           setIsPlayingAudio(true);
-
+  
           audioRef.current.onended = () => {
             setIsPlayingAudio(false);
             URL.revokeObjectURL(audioUrl);
           };
-
+  
           audioRef.current.onerror = () => {
             setIsPlayingAudio(false);
             URL.revokeObjectURL(audioUrl);
             console.error("Audio playback failed");
           };
-
+  
           await audioRef.current.play();
         }
-
+  
         if (currentConversationId) {
           try {
             await saveMessage(currentConversationId, "user", text);
@@ -353,27 +436,28 @@ export default function TrainingChat() {
             console.error("Failed to save messages:", error);
           }
         }
-             } catch (error) {
-         console.error("Error sending message:", error);
-         setIsLoading(false);
-         
-         let errorMessage = "Sorry, I encountered an error. Please try again.";
-         
-         if (error instanceof Error) {
-           if (error.message.includes("API key")) {
-             errorMessage = "API configuration error. Please check your environment variables.";
-           } else if (error.message.includes("network")) {
-             errorMessage = "Network error. Please check your internet connection.";
-           } else if (error.message.includes("timeout")) {
-             errorMessage = "Request timeout. Please try again.";
-           }
-         }
-         
-         addMessage("assistant", errorMessage);
-       }
+      } catch (error) {
+        console.error("Error sending message:", error);
+        setIsLoading(false);
+        
+        let errorMessage = "Sorry, I encountered an error. Please try again.";
+        
+        if (error instanceof Error) {
+          if (error.message.includes("API key")) {
+            errorMessage = "API configuration error. Please check your environment variables.";
+          } else if (error.message.includes("network")) {
+            errorMessage = "Network error. Please check your internet connection.";
+          } else if (error.message.includes("timeout")) {
+            errorMessage = "Request timeout. Please try again.";
+          }
+        }
+        
+        addMessage("assistant", errorMessage);
+      }
     },
-    [chatMessages, currentConversationId, addMessage, saveMessage, refetchConversations, scenarioDetails, learnerType]
+    [chatMessages, currentConversationId, addMessage, saveMessage, refetchConversations, scenarioDetails, learnerType, selectedLanguage, isLoading]
   );
+  
 
   const handleStartRecording = useCallback(() => {
     const recognition = recognitionRef.current;
@@ -454,7 +538,6 @@ export default function TrainingChat() {
     { id: "grammar", label: getText("Grammar", "ವ್ಯಾಕರಣ"), icon: Languages },
     { id: "scenario", label: getText("Scenarios", "ಸನ್ನಿವೇಶಗಳು"), icon: FileText },
   ];
-
   // Cleanup interval on unmount
   useEffect(() => {
     return () => {
@@ -1032,8 +1115,8 @@ export default function TrainingChat() {
 
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
-            {/* Feedback Button - Only show when there are messages */}
-            {chatMessages.length > 0 && (
+              {/* Feedback Button - Only show when there are messages */}
+              {chatMessages.length > 0 && (
               <FeedbackModal
                 messages={chatMessages}
                 scenario={scenarioDetails}
@@ -1075,7 +1158,7 @@ export default function TrainingChat() {
           <GradientOrb isSpeaking={isPlayingAudio} isLoading={isLoading} />
 
           <ScrollArea className="flex-1 px-4 lg:px-6">
-            <div className="max-w-6xl min-h-[400px] max-h-[70vh] overflow-y-auto mx-auto scrollbar-hide p-4 lg:p-8 bg-white rounded-xl shadow-md">
+            <div className="max-w-4xl max-h-[200px] overflow-y-auto mx-auto scrollbar-hide">
               {chatMessages.length === 0 ? (
                 <div className="text-center text-gray-500 py-8">
                   <h2 className="text-xl font-semibold mb-3 text-gray-700">

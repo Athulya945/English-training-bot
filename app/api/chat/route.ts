@@ -131,9 +131,9 @@ export async function POST(req: Request) {
     }
 
     const systemPrompt = useContext
-  ? `You are an outlet approach assistant for the ice cream brand Ideal Ice Creams, based in Mangalore.
+  ? `You are an English trainer 
 
-    Your role is to help users with questions related to retail strategy, outlet expansion, and competitive positioning in the ice cream industry.
+    Your role is to help users with questions related to English learning, and competitive positioning in the ice cream industry.
 
     Strictly follow these rules:
 

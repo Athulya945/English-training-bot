@@ -100,13 +100,14 @@ export const PushToTalkBar = ({
         <Button
           variant="ghost"
           size="sm"
-          onClick={onBack}
+          onClick={() => window.location.reload()}
           className="p-3 rounded-full hover:bg-gray-100 text-gray-600 hover:text-gray-800 transition-colors"
-          aria-label={getText("Back to scenarios", "ಸನ್ನಿವೇಶಗಳಿಗೆ ಹಿಂತಿರುಗಿ")}
-          data-testid="back-button"
+          aria-label={getText("Refresh the page", "ಪುಟವನ್ನು ರಿಫ್ರೆಶ್ ಮಾಡಿ")}
+          data-testid="refresh-button"
         >
-          <ArrowLeft className="w-5 h-5" />
+          <RotateCcw className="w-5 h-5" />
         </Button>
+
 
         {/* Mic Button */}
         <Button
