@@ -238,10 +238,38 @@ export default function TrainingChat() {
       setChatMessages([]);
       
       // Add a welcome message specific to the scenario
-      setTimeout(() => {
+      setTimeout(async () => {
         const welcomeMessage = getScenarioWelcomeMessage(found, selectedLanguage);
         if (welcomeMessage) {
+          // Add text message to chat
           addMessage("assistant", welcomeMessage);
+      
+          try {
+            // Send welcomeMessage to your TTS API
+            const res = await fetch("/api/welcome-msg", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ welcomeMessage }),
+            });
+      
+            if (!res.ok) {
+              throw new Error(`TTS request failed: ${res.status}`);
+            }
+      
+            const data = await res.json();
+      
+            if (data.audio) {
+              // Play the returned audio
+              const audio = new Audio(`data:audio/mp3;base64,${data.audio}`);
+              audio.play().catch(err =>
+                console.error("Failed to play welcome message audio:", err)
+              );
+            } else {
+              console.warn("No audio data returned from TTS API");
+            }
+          } catch (err) {
+            console.error("Error fetching TTS audio:", err);
+          }
         }
       }, 100);
     } else {
@@ -286,9 +314,9 @@ export default function TrainingChat() {
          english: "Hello! Today we'll discuss technical aspects of the project. Please share your insights and ask questions. What technical topic would you like to discuss?",
          kannada: "Hello! ಇಂದು ನಾವು ಯೋಜನೆಯ ತಾಂತ್ರಿಕ ಬಗ್ಗೆ ಚರ್ಚಿಸುತ್ತೇವೆ. ದಯವಿಟ್ಟು ನಿಮ್ಮ ಅಭಿಪ್ರಾಯಗಳನ್ನು ಹಂಚಿಕೊಳ್ಳಿ ಮತ್ತು ಪ್ರಶ್ನೆಗಳನ್ನು ಕೇಳಿ."
         },
-        "business-negotiation": {
-        english: "Good afternoon! This is a business negotiation. Let's discuss terms and try to reach an agreement. What would you like to negotiate about?",
-        kannada: "Good afternoon! ಇದು business negotiation (ವ್ಯಾಪಾರ ಮಾತುಕತೆ). ನಾವಿನ್ನು terms (ನಿಯಮಗಳು) ಚರ್ಚಿಸಿ, ಒಪ್ಪಂದಕ್ಕೆ ಬರಲು ಪ್ರಯತ್ನಿಸೋಣ."
+        "negotiation": {
+         english: "Good afternoon! This is a business negotiation. Let's discuss terms and try to reach an agreement. What would you like to negotiate about?",
+         kannada: "Good afternoon! ಇದು business negotiation (ವ್ಯಾಪಾರ ಮಾತುಕತೆ). ನಾವಿನ್ನು terms (ನಿಯಮಗಳು) ಚರ್ಚಿಸಿ, ಒಪ್ಪಂದಕ್ಕೆ ಬರಲು ಪ್ರಯತ್ನಿಸೋಣ."
         },
         "daily-life":{
          english: "Hi there! I'm your neighbor. I was just heading out and thought I'd say hello. How's your day going? What have you been up to?",
@@ -543,23 +571,40 @@ export default function TrainingChat() {
       alert("Speech Recognition not supported");
       return;
     }
-
+  
+    let transcriptBuffer = "";
+    let endTimeout: ReturnType<typeof setTimeout> | null = null;
+  
     setIsRecording(true);
-
+  
+    recognition.interimResults = true;
+    recognition.continuous = true;
+  
     recognition.onresult = (event: SpeechRecognitionEvent) => {
-      const transcript = event.results[0][0].transcript;
-      sendMessageToAPI(transcript);
+      // Update transcript on each result
+      transcriptBuffer = Array.from(event.results)
+        .map(result => result[0].transcript)
+        .join(" ");
+  
+      // Reset the "finish" timer each time speech is detected
+      if (endTimeout) clearTimeout(endTimeout);
+      endTimeout = setTimeout(() => {
+        recognition.stop(); // stop after 1.5s of silence
+      }, 1500);
     };
-
+  
     recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
       console.error("Speech recognition error:", event.error);
       setIsRecording(false);
     };
-
+  
     recognition.onend = () => {
       setIsRecording(false);
+      if (transcriptBuffer.trim()) {
+        sendMessageToAPI(transcriptBuffer.trim());
+      }
     };
-
+  
     try {
       recognition.start();
     } catch (error) {
@@ -567,6 +612,8 @@ export default function TrainingChat() {
       setIsRecording(false);
     }
   }, [sendMessageToAPI]);
+  
+  
 
   const handleStopRecording = useCallback(() => {
     const recognition = recognitionRef.current;
@@ -1086,7 +1133,7 @@ export default function TrainingChat() {
                         {getText("Email Writing", "ಇಮೇಲ್ ಬರವಣಿಗೆ")}
                       </h4>
                       <p className="text-xs text-gray-600">
-                        {getText("Practice professional email communication", "ವೃತ್ತಿಪರ ಇಮೇಲ್ ಸಂವಹನವನ್ನು ಅಭ್ಯಾಸ ಮಾಡಿ")}
+                        {getText("Practice professional email writing", "ವೃತ್ತಿಪರ ಇಮೇಲ್ ಬರವಣಿಗೆಗಳನ್ನು ಅಭ್ಯಾಸ ಮಾಡಿ")}
                       </p>
                     </Card>
                   </>
@@ -1236,7 +1283,7 @@ export default function TrainingChat() {
           <GradientOrb isSpeaking={isPlayingAudio} isLoading={isLoading} />
 
           <ScrollArea className="flex-1 px-4 lg:px-6">
-            <div className="max-w-6xl min-h-[400px] max-h-[70vh] overflow-y-auto mx-auto scrollbar-hide p-4 lg:p-8 bg-white rounded-xl shadow-md">
+            <div className="max-w-6xl min-h-[280px] max-h-[70vh] overflow-y-auto mx-auto scrollbar-hide p-4 lg:p-8 bg-white rounded-xl shadow-md">
               {chatMessages.length === 0 ? (
                 <div className="text-center text-gray-500 py-8">
                   <div className="mb-6">
