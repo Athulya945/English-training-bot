@@ -121,32 +121,35 @@ export function FeedbackModal({
           userLanguage,
         }),
       });
-
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        throw new Error("Start the conversation to get the feedback");
       }
-
+      
       const data = await response.json();
       
       if (data.error) {
         throw new Error(data.error);
       }
-
+      
       setFeedback(data.feedback);
       setStats(data.conversationStats);
-
+      
       console.log("Feedback generated:", data.feedback);
       
       if (onFeedbackGenerated) {
         onFeedbackGenerated(data.feedback);
       }
-    } catch (err) {
-      console.error("Error generating feedback:", err);
-      setError(err instanceof Error ? err.message : "Failed to generate feedback");
-    } finally {
-      setIsLoading(false);
+      } catch (err) {
+        console.error("Error generating feedback:", err);
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Start the conversation to get the feedback"
+        );
+      } finally {
+        setIsLoading(false);
+      }  
     }
-  };
 
   const handleOpen = () => {
     setIsOpen(true);
@@ -204,8 +207,8 @@ export function FeedbackModal({
           )}
 
           {error && (
-            <Card className="p-4 border-red-200 bg-red-50">
-              <div className="flex items-center gap-2 text-red-700">
+            <Card className="p-4 border-yellow-200 bg-yellow-50">
+              <div className="flex items-center gap-2 text-black-700">
                 <AlertCircle className="w-4 h-4" />
                 <span>{error}</span>
               </div>

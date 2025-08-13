@@ -80,7 +80,7 @@ export default function LanguageSelector({
 
       {/* Language Options Dropdown */}
       {isOpen && (
-        <div className="absolute top-full left-0 mt-2 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
+        <div className="absolute top-full right-0 mt-2 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
           <div className="p-4">
             <h3 className="text-sm font-semibold text-gray-800 mb-3 flex items-center gap-2">
               <Languages className="w-4 h-4" />

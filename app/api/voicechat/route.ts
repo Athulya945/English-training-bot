@@ -35,8 +35,10 @@ async function synthesizeSpeech(text: string, accent: string = "en-GB"): Promise
       body: JSON.stringify({
         input: { text },
         voice: { languageCode: accent, name: voiceMap[accent] },
-        audioConfig: { audioEncoding: "MP3", speakingRate: 1.0 },
+        audioConfig: { audioEncoding: "MP3", speakingRate: 1.0,  pitch: 0.0,
+          effectsProfileId: ["headphone-class-device"] },
       }),
+      
     });
 
     if (!res.ok) {
@@ -124,6 +126,7 @@ export async function POST(req: Request) {
     }
 
     console.log("User message:", userMessage);
+    
 
     // Enhanced system prompt with scenario-specific instructions
     let systemPrompt = `You are a specialized English language tutor. Your primary role is to help users practice English through immersive, scenario-based interactions.

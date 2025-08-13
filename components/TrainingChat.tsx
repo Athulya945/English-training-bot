@@ -9,7 +9,6 @@ import {
   Plus,
   Send,
   Search,
-  Settings,
   User,
   Menu,
   X,
@@ -238,37 +237,31 @@ export default function TrainingChat() {
       setChatMessages([]);
       
       // Add a welcome message specific to the scenario
-      setTimeout(async () => {
+      setTimeout(() => {
         const welcomeMessage = getScenarioWelcomeMessage(found, selectedLanguage);
         if (welcomeMessage) {
           // Add text message to chat
           addMessage("assistant", welcomeMessage);
       
           try {
-            // Send welcomeMessage to your TTS API
-            const res = await fetch("/api/welcome-msg", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ welcomeMessage }),
-            });
+            // Pick audio file name based on scenario and language
+            const langCode = selectedLanguage === 'kannada' ? 'kn' : 'en';
+            const audioPath = `/welcome_audios/${scenarioId}_${langCode}.mp3`;
       
-            if (!res.ok) {
-              throw new Error(`TTS request failed: ${res.status}`);
+            // Stop previous audio if playing
+            if (window.currentWelcomeAudio && !window.currentWelcomeAudio.paused) {
+              window.currentWelcomeAudio.pause();
+              window.currentWelcomeAudio.currentTime = 0;
             }
       
-            const data = await res.json();
-      
-            if (data.audio) {
-              // Play the returned audio
-              const audio = new Audio(`data:audio/mp3;base64,${data.audio}`);
-              audio.play().catch(err =>
-                console.error("Failed to play welcome message audio:", err)
-              );
-            } else {
-              console.warn("No audio data returned from TTS API");
-            }
+            // Create and play new audio
+            const audio = new Audio(audioPath);
+            window.currentWelcomeAudio = audio;
+            audio.play().catch(err =>
+              console.error("Failed to play welcome message audio:", err)
+            );
           } catch (err) {
-            console.error("Error fetching TTS audio:", err);
+            console.error("Error playing pre-recorded audio:", err);
           }
         }
       }, 100);
@@ -306,7 +299,7 @@ export default function TrainingChat() {
          english: "Hello! Today we'll practice writing a professional email. Please start with a proper greeting and subject line. What type of email would you like to write?",
          kannada: "Hello! ಇಂದು ನಾವು professional email (ವೃತ್ತಿಪರ ಇಮೇಲ್) ಬರೆಯುವ ಅಭ್ಯಾಸ ಮಾಡುತ್ತೇವೆ. ದಯವಿಟ್ಟು ಸರಿಯಾದ greeting (ಸ್ವಾಗತ) ಮತ್ತು subject line (ವಿಷಯ ಶೀರ್ಷಿಕೆ) ನಿಂದ ಪ್ರಾರಂಭಿಸಿ."
         },
-        "client-presentation": {
+        "presentation": {
          english: "Hello! Today you will present your ideas to the client. Be confident, maintain eye contact, and highlight the key benefits. What would you like to present?",
          kannada: "Hello! ಇಂದು ನೀವು ನಿಮ್ಮ ideas (ಆಲೋಚನೆಗಳು) ಅನ್ನು client (ಗ್ರಾಹಕ) ಗೆ ಪ್ರಸ್ತುತಪಡಿಸುತ್ತೀರಿ. ಆತ್ಮವಿಶ್ವಾಸದಿಂದಿರಿ, eye contact (ಕಣ್ಣು ಸಂಪರ್ಕ) ಕಾಯ್ದುಕೊಳ್ಳಿ, ಮತ್ತು ಮುಖ್ಯ benefits (ಲಾಭಗಳು) ಅನ್ನು ಒತ್ತಿಹೇಳಿ."
         },
@@ -337,7 +330,20 @@ export default function TrainingChat() {
         "articles": {
          english: "Let's practice using articles (a, an, the) correctly today! These small words are very important in English. Ready to begin?",
          kannada: "Let's practice using articles (a, an, the) correctly today! These small words are very important in English."
-        }
+        },
+        "tools": {
+         english: "Welcome! Today we'll talk about tools and equipment. Let's identify their names, uses, and how to handle them safely. What tool would you like to start with?",
+         kannada: "Welcome! ಇಂದು ನಾವು tools (ಉಪಕರಣಗಳು) ಮತ್ತು equipment (ಸಾಧನಗಳು) ಬಗ್ಗೆ ಮಾತನಾಡೋಣ. ಅವುಗಳ ಹೆಸರುಗಳು, ಬಳಕೆ ಮತ್ತು ಅವನ್ನು ಸುರಕ್ಷಿತವಾಗಿ ಹೇಗೆ ನಿಭಾಯಿಸಬೇಕು ಎಂಬುದನ್ನು ತಿಳಿದುಕೊಳ್ಳೋಣ. ಯಾವ tool (ಉಪಕರಣ) ನಿಂದ ಪ್ರಾರಂಭಿಸೋಣ?"
+        },
+        "hobbies": {
+         english: "Hi! Let's talk about hobbies today. What activities do you enjoy doing in your free time? Feel free to share why you like them.",
+         kannada: "ನಮಸ್ಕಾರ! ಇಂದು ನಾವು ಹವ್ಯಾಸಗಳ ಬಗ್ಗೆ ಮಾತನಾಡೋಣ. (Hi! Let's talk about hobbies today.) ನಿಮ್ಮ ಖಾಲಿ ಸಮಯದಲ್ಲಿ ನೀವು ಮಾಡುವ ಯಾವ ಚಟುವಟಿಕೆಗಳನ್ನು ನೀವು ಆನಂದಿಸುತ್ತೀರಿ? (What activities do you enjoy doing in your free time?) ಅವುಗಳನ್ನು ನೀವು ಏಕೆ ಇಷ್ಟಪಡುತ್ತೀರಿ ಎಂಬುದನ್ನು ಹಂಚಿಕೊಳ್ಳಿ. (Feel free to share why you like them.)"
+        },
+        "kannada-pronunciation": {
+         kannada: "Kannada guidance (ಕನ್ನಡ ಮಾರ್ಗದರ್ಶನ) ಜೊತೆ English pronunciation (ಇಂಗ್ಲಿಷ್ ಉಚ್ಚಾರಣೆ) ಅಭ್ಯಾಸ ಮಾಡಿ"
+        },
+
+
     };
   
     const scenarioId = scenario.id || scenario.name;
@@ -590,7 +596,7 @@ export default function TrainingChat() {
       if (endTimeout) clearTimeout(endTimeout);
       endTimeout = setTimeout(() => {
         recognition.stop(); // stop after 1.5s of silence
-      }, 1500);
+      }, 2500);
     };
   
     recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
@@ -899,8 +905,9 @@ export default function TrainingChat() {
                         ಉಚ್ಚಾರಣೆ ಅಭ್ಯಾಸ
                       </h4>
                       <p className="text-xs text-gray-600">
-                        Practice English pronunciation with Kannada guidance
+                        ಕನ್ನಡ ಮಾರ್ಗದರ್ಶನದೊಂದಿಗೆ ಇಂಗ್ಲಿಷ್ ಉಚ್ಚಾರಣೆಯ ಅಭ್ಯಾಸ ಮಾಡಿ
                       </p>
+
                     </Card>
                   </>
                 )}
@@ -1052,10 +1059,10 @@ export default function TrainingChat() {
                       `}
                     >
                       <h4 className="text-sm font-semibold text-gray-800 mb-1">
-                        Tools & Equipment
+                      {getText("Tools and Equipment", "ಉಪಕರಣಗಳು ಮತ್ತು ಸಾಧನಗಳು")}
                       </h4>
                       <p className="text-xs text-gray-600">
-                        Learn names of common tools
+                      {getText("Learn names of common tools", "ಸಾಮಾನ್ಯ ಉಪಕರಣಗಳ ಹೆಸರನ್ನು ಕಲಿಯಿರಿ")}
                       </p>
                     </Card>
                   </>
@@ -1256,6 +1263,7 @@ export default function TrainingChat() {
                 }}
               />
             )}
+           
             <LanguageSelector
               selectedLanguage={selectedLanguage}
               onLanguageChange={setSelectedLanguage}
@@ -1266,14 +1274,8 @@ export default function TrainingChat() {
               size="sm"
               className="p-2 h-10 w-10 text-gray-500 hover:text-gray-800 hover:bg-gray-100 rounded-full"
             >
-              <Settings className="w-5 h-5" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="p-2 h-10 w-10 text-gray-500 hover:text-gray-800 hover:bg-gray-100 rounded-full"
-              onClick={() => setShowAuthModal(true)}
-            >
+            
+            
               <User className="w-5 h-5" />
             </Button>
           </div>
