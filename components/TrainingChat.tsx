@@ -329,7 +329,7 @@ export default function TrainingChat() {
         },
         "articles": {
          english: "Let's practice using articles (a, an, the) correctly today! These small words are very important in English. Ready to begin?",
-         kannada: "Let's practice using articles (a, an, the) correctly today! These small words are very important in English."
+         kannada: "ಇಂದು ನಾವು 'a', 'an', 'the' ಎಂಬ articles ಸರಿಯಾಗಿ ಬಳಸುವುದನ್ನು ಅಭ್ಯಾಸ ಮಾಡೋಣ! ಇಂತಹ ಸಣ್ಣ ಪದಗಳು ಇಂಗ್ಲಿಷ್‌ನಲ್ಲಿ ತುಂಬಾ ಮುಖ್ಯವಾಗಿವೆ."
         },
         "tools": {
          english: "Welcome! Today we'll talk about tools and equipment. Let's identify their names, uses, and how to handle them safely. What tool would you like to start with?",
