@@ -27,13 +27,14 @@ async function synthesizeSpeech(text: string, language: string = "en-GB"): Promi
     
          // Voice mapping for different languages
      const voiceMap: Record<string, { languageCode: string; name: string }> = {
-       "en-GB": { languageCode: "en-GB", name: "en-GB-Standard-A" },
+       //"en-GB": { languageCode: "en-GB", name: "en-GB-Standard-A" },
        //"en-US": { languageCode: "en-US", name: "en-US-Standard-C" },
        "en-IN": { languageCode: "en-IN", name: "en-IN-Standard-A" },
        "kn-IN": { languageCode: "kn-IN", name: "kn-IN-Standard-A" }, // Kannada voice
        // Enhanced English voices for pronunciation learning
-       "en-IN-clear": { languageCode: "en-IN", name: "en-IN-Standard-A" }, // Clear American accent
-       //"en-GB-clear": { languageCode: "en-GB", name: "en-GB-Standard-B" }, // Clear British accent
+       "en-IN-clear": { languageCode: "en-IN", name: "en-IN-Standard-A" },
+       "en-US-clear": { languageCode: "en-US", name: "en-US-Standard-A" }, // Clear American accent
+       "en-GB-clear": { languageCode: "en-GB", name: "en-GB-Standard-B" }, // Clear British accent
      };
 
     const voiceConfig = voiceMap[language] || voiceMap["en-GB"];
@@ -47,8 +48,8 @@ async function synthesizeSpeech(text: string, language: string = "en-GB"): Promi
          voice: { languageCode: voiceConfig.languageCode, name: voiceConfig.name },
          audioConfig: { 
            audioEncoding: "MP3", 
-           speakingRate: language.includes("en-US-clear") ? 0.9 : 1.0, // Slightly slower for pronunciation learning
-           pitch: language.includes("en-US-clear") ? 0.0 : 0.0, // Natural pitch
+           speakingRate: language.includes("en-IN-clear") ? 0.9 : 1.0, // Slightly slower for pronunciation learning
+           pitch: language.includes("en-IN-clear") ? 0.0 : 0.0, // Natural pitch
            effectsProfileId: language.includes("en-US-clear") ? ["headphone-class-device"] : [] // Better audio quality for learning
          },
        }),
@@ -274,8 +275,8 @@ Remember: You have two voices - Kannada voice for understanding and English voic
            const kannadaAudio = await synthesizeSpeech(kannadaText, "kn-IN");
            console.log("Kannada audio length:", kannadaAudio.length);
            
-           console.log("Synthesizing English with en-IN-Standard-A voice for pronunciation learning...");
-           const englishAudio = await synthesizeSpeech(englishText, "en-IN-clear");
+           console.log("Synthesizing English with en-US-Standard-A voice for pronunciation learning...");
+           const englishAudio = await synthesizeSpeech(englishText, "en-US-clear");
            console.log("English audio length:", englishAudio.length);
            
            // Combine the audio - simple concatenation
@@ -292,8 +293,8 @@ Remember: You have two voices - Kannada voice for understanding and English voic
            audioBytes = await synthesizeSpeech(kannadaText, "kn-IN");
          } else {
            // Only English text available
-           console.log("Synthesizing English only with en-IN-Standard-A voice for pronunciation learning...");
-           audioBytes = await synthesizeSpeech(englishText || cleanedText, "en-IN-clear");
+           console.log("Synthesizing English only with en-US-Standard-A voice for pronunciation learning...");
+           audioBytes = await synthesizeSpeech(englishText || cleanedText, "en-US-clear");
          }
        } else {
          // Pure Kannada response (when user speaks Kannada)
@@ -355,7 +356,7 @@ Remember: You have two voices - Kannada voice for understanding and English voic
          const kannadaAudio = await synthesizeSpeech(kannadaFallback, "kn-IN");
          console.log("Fallback Kannada audio length:", kannadaAudio.length);
          
-         const englishAudio = await synthesizeSpeech(englishFallback, "en-IN-clear");
+         const englishAudio = await synthesizeSpeech(englishFallback, "en-US-clear");
          console.log("Fallback English audio length:", englishAudio.length);
          
          // Combine the audio - simple concatenation

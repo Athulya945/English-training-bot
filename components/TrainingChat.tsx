@@ -288,8 +288,8 @@ export default function TrainingChat() {
           kannada: "ತಾಂತ್ರಿಕ ವರ್ಕ್‌ಶಾಪ್‌ಗೆ ಸ್ವಾಗತ! (Welcome to the technical workshop!) ಮೊದಲು ಸುರಕ್ಷತೆ — ಎಲ್ಲಾ ರಕ್ಷಣಾತ್ಮಕ ಉಪಕರಣಗಳನ್ನು ಧರಿಸಿದ್ದೀರಾ ಎಂದು ಖಚಿತಪಡಿಸಿಕೊಳ್ಳಿ. (Safety first — ensure you have all protective equipment in place.) ಇಂದು, ನಾವು ನಮ್ಮ ಯೋಜನೆಯಲ್ಲಿ ಕೆಲಸ ಮಾಡುವಾಗ ಸ್ಪಷ್ಟ ಮತ್ತು ನಿಖರವಾದ ತಾಂತ್ರಿಕ ಸಂವಹನದ ಮೇಲೆ ಗಮನ ಹರಿಸುತ್ತೇವೆ. (Today, we'll focus on clear and precise technical communication while working on our project.) ಯಾವ ತಾಂತ್ರಿಕ ಕೆಲಸದಿಂದ ಪ್ರಾರಂಭಿಸೋಣ? (What technical task shall we begin with?)"
         },
         "meeting": {
-          english: "Good morning everyone! Let's start today's meeting. I have the agenda here - shall we begin? Please share any updates or concerns you'd like to discuss.",
-          kannada: "ಎಲ್ಲರಿಗೂ ಶುಭೋದಯ! (Good morning everyone!) ಇಂದಿನ ಸಭೆಯನ್ನು ಪ್ರಾರಂಭಿಸೋಣ. (Let's start today's meeting.) ನನ್ನ ಬಳಿ ಅಜೆಂಡಾ ಇದೆ — ನಾವು ಪ್ರಾರಂಭಿಸಬಹುದೇ? (I have the agenda here — shall we begin?)"
+          english: "Hello everyone! Let's start today's meeting. I have the agenda here - shall we begin? Please share any updates or concerns you'd like to discuss.",
+          kannada: "ಎಲ್ಲರಿಗೂ ಶುಭೋದಯ! (Hello everyone!) ಇಂದಿನ ಸಭೆಯನ್ನು ಪ್ರಾರಂಭಿಸೋಣ. (Let's start today's meeting.) ನನ್ನ ಬಳಿ ಅಜೆಂಡಾ ಇದೆ — ನಾವು ಪ್ರಾರಂಭಿಸಬಹುದೇ? (I have the agenda here — shall we begin?)"
         },
         "kannada-conversation": {
           english: "ನಮಸ್ಕಾರ! I'm here to help you practice English conversation. ಇಂಗ್ಲಿಷ್ನಲ್ಲಿ ಮಾತನಾಡಲು ಪ್ರಯತ್ನಿಸಿ! Let's start with a simple greeting.",
@@ -308,8 +308,8 @@ export default function TrainingChat() {
          kannada: "Hello! ಇಂದು ನಾವು ಯೋಜನೆಯ ತಾಂತ್ರಿಕ ಬಗ್ಗೆ ಚರ್ಚಿಸುತ್ತೇವೆ. ದಯವಿಟ್ಟು ನಿಮ್ಮ ಅಭಿಪ್ರಾಯಗಳನ್ನು ಹಂಚಿಕೊಳ್ಳಿ ಮತ್ತು ಪ್ರಶ್ನೆಗಳನ್ನು ಕೇಳಿ."
         },
         "negotiation": {
-         english: "Good afternoon! This is a business negotiation. Let's discuss terms and try to reach an agreement. What would you like to negotiate about?",
-         kannada: "Good afternoon! ಇದು business negotiation (ವ್ಯಾಪಾರ ಮಾತುಕತೆ). ನಾವಿನ್ನು terms (ನಿಯಮಗಳು) ಚರ್ಚಿಸಿ, ಒಪ್ಪಂದಕ್ಕೆ ಬರಲು ಪ್ರಯತ್ನಿಸೋಣ."
+         english: "Hello! This is a business negotiation. Let's discuss terms and try to reach an agreement. What would you like to negotiate about?",
+         kannada: "ನಮಸ್ಕಾರ! ಇದು business negotiation (ವ್ಯಾಪಾರ ಮಾತುಕತೆ). ನಾವಿನ್ನು terms (ನಿಯಮಗಳು) ಚರ್ಚಿಸಿ, ಒಪ್ಪಂದಕ್ಕೆ ಬರಲು ಪ್ರಯತ್ನಿಸೋಣ."
         },
         "daily-life":{
          english: "Hi there! I'm your neighbor. I was just heading out and thought I'd say hello. How's your day going? What have you been up to?",
@@ -329,7 +329,7 @@ export default function TrainingChat() {
         },
         "articles": {
          english: "Let's practice using articles (a, an, the) correctly today! These small words are very important in English. Ready to begin?",
-         kannada: "ಇಂದು ನಾವು 'a', 'an', 'the' ಎಂಬ articles ಸರಿಯಾಗಿ ಬಳಸುವುದನ್ನು ಅಭ್ಯಾಸ ಮಾಡೋಣ! ಇಂತಹ ಸಣ್ಣ ಪದಗಳು ಇಂಗ್ಲಿಷ್‌ನಲ್ಲಿ ತುಂಬಾ ಮುಖ್ಯವಾಗಿವೆ."
+         kannada:"ಇಂದು ನಾವು 'a', 'an', 'the' ಎಂಬ articles ಸರಿಯಾಗಿ ಬಳಸುವುದನ್ನು ಅಭ್ಯಾಸ ಮಾಡೋಣ! ಇಂತಹ ಸಣ್ಣ ಪದಗಳು ಇಂಗ್ಲಿಷ್‌ನಲ್ಲಿ ತುಂಬಾ ಮುಖ್ಯವಾಗಿವೆ."
         },
         "tools": {
          english: "Welcome! Today we'll talk about tools and equipment. Let's identify their names, uses, and how to handle them safely. What tool would you like to start with?",
@@ -339,8 +339,8 @@ export default function TrainingChat() {
          english: "Hi! Let's talk about hobbies today. What activities do you enjoy doing in your free time? Feel free to share why you like them.",
          kannada: "ನಮಸ್ಕಾರ! ಇಂದು ನಾವು ಹವ್ಯಾಸಗಳ ಬಗ್ಗೆ ಮಾತನಾಡೋಣ. (Hi! Let's talk about hobbies today.) ನಿಮ್ಮ ಖಾಲಿ ಸಮಯದಲ್ಲಿ ನೀವು ಮಾಡುವ ಯಾವ ಚಟುವಟಿಕೆಗಳನ್ನು ನೀವು ಆನಂದಿಸುತ್ತೀರಿ? (What activities do you enjoy doing in your free time?) ಅವುಗಳನ್ನು ನೀವು ಏಕೆ ಇಷ್ಟಪಡುತ್ತೀರಿ ಎಂಬುದನ್ನು ಹಂಚಿಕೊಳ್ಳಿ. (Feel free to share why you like them.)"
         },
-        "kannada-pronunciation": {
-         kannada: "Kannada guidance (ಕನ್ನಡ ಮಾರ್ಗದರ್ಶನ) ಜೊತೆ English pronunciation (ಇಂಗ್ಲಿಷ್ ಉಚ್ಚಾರಣೆ) ಅಭ್ಯಾಸ ಮಾಡಿ"
+        "kannada-vocabulary": {
+         kannada: "ನಮಸ್ಕಾರ! ಇಂದು ನಾವು Kannada vocabulary (ಕನ್ನಡ ಪದಸಂಪತ್ತು) ಅಭ್ಯಾಸ ಮಾಡುತ್ತೇವೆ."
         },
 
 
