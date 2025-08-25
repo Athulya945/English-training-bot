@@ -41,15 +41,6 @@ const languageOptions: LanguageOption[] = [
     apiEndpoint: "/api/kannada-chat",
     voiceApiEndpoint: "/api/kannada-voicechat"
   },
-  {
-    id: "english-pronunciation",
-    name: "English Pronunciation",
-    nativeName: "English Pronunciation",
-    flag: "🎤",
-    description: "Practice English pronunciation with clear American accent",
-    apiEndpoint: "/api/chat",
-    voiceApiEndpoint: "/api/english-voicechat"
-  }
 ];
 
 export default function LanguageSelector({ 
